@@ -1069,6 +1069,60 @@
         </div>
     </div>
 
+    <!-- PRO UPGRADE MODAL -->
+    <div id="pro-modal-overlay" class="fixed inset-0 z-[199] hidden items-center justify-center flex interactive" style="background: rgba(0,0,0,0.6); backdrop-filter: blur(8px);" onclick="closePaymentModal(event)">
+        <div id="pro-modal-content" class="relative glass-panel bg-ai-bg/95 w-full max-w-lg p-8 border border-brand-light/30 rounded-3xl shadow-2xl neuro-panel-enter">
+            <!-- Close Button -->
+            <button onclick="closePaymentModalDirect()" class="absolute top-4 right-4 p-2 text-white/30 hover:text-white transition-colors cursor-pointer">
+                <span class="iconify text-xl" data-icon="mdi:close"></span>
+            </button>
+            
+            <!-- Header -->
+            <div class="text-center mb-8">
+                <div class="w-16 h-16 bg-brand-light/10 rounded-2xl flex items-center justify-center mx-auto mb-4 border border-brand-light/30 shadow-[0_0_20px_rgba(62,107,78,0.3)] animate-float">
+                    <span class="iconify text-4xl text-brand-light" data-icon="mdi:diamond-stone"></span>
+                </div>
+                <h3 class="text-2xl font-serif text-white mb-2">Pragati <span class="text-brand-light">Pro</span></h3>
+                <p class="text-xs text-brand-light uppercase tracking-widest font-bold">Limitless Cognitive Bandwidth</p>
+            </div>
+            
+            <!-- Features Grid -->
+            <div class="space-y-4 mb-8">
+                <div class="flex items-start gap-4 p-4 rounded-xl bg-white/5 border border-white/5 hover:border-brand-light/20 transition-colors">
+                    <div class="mt-0.5"><span class="iconify text-brand-light text-xl" data-icon="mdi:brain"></span></div>
+                    <div>
+                        <h4 class="text-sm font-bold text-white mb-1">Advanced Neural Routing</h4>
+                        <p class="text-xs text-white/50">Unlock deepest reinforcement learning layers for hyper-personalized scheduling flow.</p>
+                    </div>
+                </div>
+                <div class="flex items-start gap-4 p-4 rounded-xl bg-white/5 border border-white/5 hover:border-brand-light/20 transition-colors">
+                    <div class="mt-0.5"><span class="iconify text-brand-light text-xl" data-icon="mdi:chart-scatter-plot-hexbin"></span></div>
+                    <div>
+                        <h4 class="text-sm font-bold text-white mb-1">Unlimited Telemetry</h4>
+                        <p class="text-xs text-white/50">Connect unlimited custom webhooks & external API streams into your dashboard.</p>
+                    </div>
+                </div>
+                <div class="flex items-start gap-4 p-4 rounded-xl bg-white/5 border border-white/5 hover:border-brand-light/20 transition-colors">
+                    <div class="mt-0.5"><span class="iconify text-brand-light text-xl" data-icon="mdi:shield-check"></span></div>
+                    <div>
+                        <h4 class="text-sm font-bold text-white mb-1">Priority Sensory Shield</h4>
+                        <p class="text-xs text-white/50">Advanced executive friction management & custom Neuro-Adaptive condition profiles.</p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Payment Action -->
+            <div class="text-center">
+                <div class="text-3xl font-bold text-white mb-1">$9<span class="text-lg text-white/50 font-normal">/mo</span></div>
+                <p class="text-[10px] text-white/40 uppercase tracking-widest mb-6">Billed annually, cancel anytime</p>
+                <button onclick="toast('Redirecting to secure payment gateway...'); setTimeout(closePaymentModalDirect, 1500);" class="w-full py-4 rounded-xl bg-brand/80 hover:bg-brand text-white font-bold tracking-widest uppercase transition-all shadow-[0_0_20px_rgba(62,107,78,0.5)] hover:shadow-[0_0_30px_rgba(62,107,78,0.8)] border border-brand-light/50 text-sm flex items-center justify-center gap-2">
+                    <span class="iconify text-xl" data-icon="mdi:credit-card-fast-outline"></span>
+                    Upgrade to Pro via Stripe
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- TOAST CONTAINER -->
     <div id="toast-wrapper" class="fixed top-6 left-1/2 transform -translate-x-1/2 z-[200] flex flex-col gap-2 pointer-events-none"></div>
 
@@ -2600,6 +2654,28 @@
             
             // Override the task renderer with neuro-aware version
             window.renderAcademicTasks = renderAcademicTasksNeuro;
+        }
+
+        // --- Pro Upgrade Modal Logic ---
+        function openPaymentModal() {
+            const modal = document.getElementById('pro-modal-overlay');
+            if (modal) {
+                modal.classList.remove('hidden');
+            }
+        }
+
+        function closePaymentModal(event) {
+            // Only close if clicking on the overlay background, not the modal content itself
+            if (event.target === event.currentTarget) {
+                closePaymentModalDirect();
+            }
+        }
+
+        function closePaymentModalDirect() {
+            const modal = document.getElementById('pro-modal-overlay');
+            if (modal) {
+                modal.classList.add('hidden');
+            }
         }
 
         /**************************************************************
