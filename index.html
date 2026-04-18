@@ -1,0 +1,2636 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pragati — Core Interface</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://code.iconify.design/3/3.1.1/iconify.min.js"></script>
+    <!-- Three.js for 3D AI Core -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,300;0,6..72,400;1,6..72,300&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'ai-bg': '#050907',
+                        'ai-panel': 'rgba(12, 18, 15, 0.65)',
+                        'ai-border': 'rgba(62, 107, 78, 0.25)',
+                        'brand': '#3E6B4E',
+                        'brand-light': '#5A8A6A',
+                        'brand-glow': 'rgba(62, 107, 78, 0.6)'
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        serif: ['Newsreader', 'serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #050907;
+            color: #E2E8F0;
+            overflow-y: auto;
+            overflow-x: hidden;
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+        }
+
+        #bg-canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: 0;
+        }
+
+        .ui-layer {
+            position: relative;
+            width: 100%;
+            min-height: 100vh;
+            z-index: 10;
+            pointer-events: none;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .interactive {
+            pointer-events: auto;
+        }
+
+        .glass-panel {
+            background: var(--ai-panel, rgba(12, 18, 15, 0.65));
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid var(--ai-border, rgba(62, 107, 78, 0.25));
+            border-radius: 12px;
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+        }
+
+        /* Scrollbars */
+        ::-webkit-scrollbar { width: 4px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: rgba(90, 138, 106, 0.4); border-radius: 2px; }
+        ::-webkit-scrollbar-thumb:hover { background: #3E6B4E; }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        @keyframes float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-5px); }
+        }
+
+        .animate-fade {
+            animation: fadeIn 0.4s ease-out forwards;
+        }
+        
+        .animate-float {
+            animation: float 6s ease-in-out infinite;
+        }
+
+        .chat-msg {
+            max-width: 80%;
+            padding: 10px 14px;
+            border-radius: 12px;
+            font-size: 13px;
+            line-height: 1.5;
+            margin-bottom: 12px;
+            animation: fadeIn 0.3s ease-out forwards;
+        }
+        
+        .msg-ai {
+            background: rgba(62, 107, 78, 0.15);
+            border: 1px solid rgba(62, 107, 78, 0.3);
+            border-bottom-left-radius: 2px;
+            align-self: flex-start;
+        }
+
+        .msg-user {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-bottom-right-radius: 2px;
+            align-self: flex-end;
+            color: #fff;
+        }
+
+        .glow-effect {
+            box-shadow: 0 0 15px rgba(62, 107, 78, 0.5);
+        }
+        
+        /* Modal Overlay */
+        .modal-overlay {
+            background: rgba(0,0,0,0.6);
+            backdrop-filter: blur(8px);
+        }
+
+        .mask-fade-top {
+            mask-image: linear-gradient(to bottom, transparent, black 15%, black 100%);
+            -webkit-mask-image: linear-gradient(to bottom, transparent, black 15%, black 100%);
+        }
+
+        /* ============================================ */
+        /* NEURO-ADAPTIVE PIVOT STYLES                 */
+        /* ============================================ */
+
+        /* SOS Button — Floating "I Need Help" */
+        @keyframes sos-breathe {
+            0%, 100% { box-shadow: 0 0 10px rgba(168, 85, 247, 0.3), 0 0 40px rgba(168, 85, 247, 0.1); transform: scale(1); }
+            50% { box-shadow: 0 0 20px rgba(168, 85, 247, 0.5), 0 0 60px rgba(168, 85, 247, 0.2); transform: scale(1.04); }
+        }
+
+        #neuro-sos-btn {
+            animation: sos-breathe 4s ease-in-out infinite;
+            transition: all 0.3s ease;
+        }
+        #neuro-sos-btn:hover {
+            animation: none;
+            box-shadow: 0 0 25px rgba(168, 85, 247, 0.7), 0 0 60px rgba(168, 85, 247, 0.3);
+            transform: scale(1.08);
+        }
+
+        /* Neuro Panel Slide-up */
+        @keyframes neuro-slide-up {
+            from { opacity: 0; transform: translateY(20px) scale(0.97); }
+            to { opacity: 1; transform: translateY(0) scale(1); }
+        }
+        .neuro-panel-enter {
+            animation: neuro-slide-up 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+
+        /* Bandwidth Indicator Colors */
+        .bw-high   { color: #5A8A6A; border-color: rgba(90, 138, 106, 0.5); }
+        .bw-medium { color: #F6AD55; border-color: rgba(246, 173, 85, 0.4); }
+        .bw-low    { color: #90CDF4; border-color: rgba(144, 205, 244, 0.4); }
+        .bw-zero   { color: #CBD5E0; border-color: rgba(203, 213, 224, 0.3); }
+
+        .bw-dot-high   { background: #5A8A6A; box-shadow: 0 0 8px rgba(90,138,106,0.6); }
+        .bw-dot-medium { background: #F6AD55; box-shadow: 0 0 8px rgba(246,173,85,0.5); }
+        .bw-dot-low    { background: #90CDF4; box-shadow: 0 0 8px rgba(144,205,244,0.5); }
+        .bw-dot-zero   { background: #CBD5E0; box-shadow: none; }
+
+        /* Shame-Free Glide Animation */
+        @keyframes glide-pulse {
+            0%, 100% { border-left-color: rgba(246, 173, 85, 0.4); }
+            50% { border-left-color: rgba(246, 173, 85, 0.8); }
+        }
+        .task-glided {
+            border-left: 3px solid rgba(246, 173, 85, 0.5);
+            animation: glide-pulse 3s ease-in-out infinite;
+        }
+        .task-dissolved {
+            opacity: 0.25;
+            border-left: 3px solid rgba(203, 213, 224, 0.2);
+            pointer-events: none;
+        }
+
+        /* Emergency Mode — Visual De-stimulation */
+        body.emergency-mode {
+            background-color: #0a0a0a !important;
+        }
+        body.emergency-mode #bg-canvas {
+            opacity: 0.05 !important;
+        }
+        body.emergency-mode .glass-panel {
+            border-color: rgba(255,255,255,0.06) !important;
+            box-shadow: none !important;
+        }
+        body.emergency-mode .glow-effect,
+        body.emergency-mode [class*="shadow-glow"],
+        body.emergency-mode [class*="shadow-[0_0"] {
+            box-shadow: none !important;
+        }
+        body.emergency-mode .animate-pulse,
+        body.emergency-mode .animate-float,
+        body.emergency-mode .sequence-pulse {
+            animation: none !important;
+        }
+        body.emergency-mode #neuro-sos-btn {
+            animation: none;
+            box-shadow: 0 0 8px rgba(168, 85, 247, 0.2);
+        }
+
+        /* Bandwidth Selector Button States */
+        .bw-option {
+            transition: all 0.25s ease;
+            cursor: pointer;
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 12px;
+            padding: 10px 14px;
+            text-align: center;
+        }
+        .bw-option:hover { background: rgba(255,255,255,0.06); }
+        .bw-option.active {
+            background: rgba(255,255,255,0.08);
+            border-color: currentColor;
+        }
+
+        /* Condition Preset Chips */
+        .condition-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 14px;
+            border-radius: 20px;
+            border: 1px solid rgba(255,255,255,0.08);
+            background: rgba(255,255,255,0.03);
+            font-size: 10px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: rgba(255,255,255,0.6);
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .condition-chip:hover { background: rgba(255,255,255,0.08); color: #fff; }
+        .condition-chip.active {
+            background: rgba(168, 85, 247, 0.15);
+            border-color: rgba(168, 85, 247, 0.4);
+            color: #D6BCFA;
+        }
+
+        /* Recovery Card */
+        .recovery-card {
+            background: rgba(144, 205, 244, 0.05);
+            border: 1px solid rgba(144, 205, 244, 0.15);
+            border-radius: 12px;
+            padding: 16px;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- 3D Canvas Background -->
+    <canvas id="bg-canvas"></canvas>
+
+    <!-- Main UI Layer -->
+    <div class="ui-layer">
+        
+        <!-- Header -->
+        <header class="w-full flex justify-between items-center p-6 interactive">
+            <div class="flex items-center gap-4 animate-fade">
+                <div class="w-12 h-12 flex items-center justify-center rounded-lg border border-brand/30 bg-black/40 overflow-hidden glow-effect">
+                    <img src="logo.png" alt="Pragati Logo" class="w-full h-full object-contain">
+                </div>
+                <div class="flex flex-col">
+                    <h1 class="text-sm font-bold tracking-wider text-white uppercase">Pragati Agent</h1>
+                    <span id="ai-status" class="text-[9px] text-brand-light uppercase tracking-[0.2em] mt-0.5 sequence-pulse">Neural Sync: Active</span>
+                </div>
+            </div>
+            
+            <div class="flex gap-4">
+                <div class="flex items-center gap-3">
+                    <button onclick="updateHubZoom(-0.1)" class="w-8 h-8 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center hover:bg-white/10 transition-all text-white/50 hover:text-white" title="Zoom Out">
+                        <span class="iconify" data-icon="mdi:minus"></span>
+                    </button>
+                    <button onclick="updateHubZoom(0.1)" class="w-8 h-8 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center hover:bg-white/10 transition-all text-white/50 hover:text-white" title="Zoom In">
+                        <span class="iconify" data-icon="mdi:plus"></span>
+                    </button>
+                    <button onclick="closeStudentHub()" class="w-8 h-8 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center hover:bg-white/10 transition-all text-white/50 hover:text-white group">
+                        <span class="iconify group-hover:rotate-90 transition-transform" data-icon="mdi:close"></span>
+                    </button>
+                </div>
+                <button onclick="toggleStudentMode()" id="student-toggle" class="glass-panel px-3 h-10 flex items-center justify-center hover:bg-white/10 transition-colors group border-white/10" title="Switch to Student Mode">
+                    <span class="text-[10px] font-bold tracking-widest uppercase text-white/40 group-hover:text-white transition-colors flex items-center gap-2">
+                        <span class="iconify text-lg" data-icon="mdi:school-outline"></span>
+                        <span id="mode-text">Professional</span>
+                    </span>
+                </button>
+                <button onclick="toggleNeuroPanel()" id="neuro-header-btn" class="glass-panel px-3 h-10 flex items-center justify-center hover:bg-purple-500/15 border-purple-500/20 transition-colors group" title="Neuro-Adaptive Controls — I Need Help">
+                    <span class="text-[10px] font-bold tracking-widest uppercase text-purple-400/70 group-hover:text-purple-300 transition-colors flex items-center gap-2">
+                        <span class="iconify text-lg" data-icon="mdi:head-snowflake-outline"></span>
+                        <span>Neuro</span>
+                        <span class="w-1.5 h-1.5 rounded-full bw-dot-high" id="header-bw-dot"></span>
+                    </span>
+                </button>
+                <a href="dashboard.html" class="glass-panel w-10 h-10 flex items-center justify-center hover:bg-white/5 transition-colors group" title="View Daily Dashboard">
+                    <span class="iconify text-white/70 group-hover:text-brand-light transition-colors text-lg" data-icon="mdi:view-dashboard-outline"></span>
+                </a>
+                <button onclick="openPaymentModal()" class="glass-panel px-4 py-1 h-10 flex items-center justify-center hover:bg-brand-light/20 border-brand-light/30 transition-colors group shadow-[0_0_10px_rgba(62,107,78,0.3)]" title="Upgrade">
+                    <span class="text-xs font-semibold text-brand-light group-hover:text-white transition-colors tracking-widest uppercase flex items-center gap-1.5"><span class="iconify" data-icon="mdi:credit-card-outline"></span> Pro</span>
+                </button>
+                <button onclick="toggleIntegrations()" class="glass-panel w-10 h-10 flex items-center justify-center hover:bg-white/5 transition-colors group" title="Integrations">
+                    <span class="iconify text-white/70 group-hover:text-brand-light transition-colors text-lg" data-icon="mdi:connection"></span>
+                </button>
+                <button onclick="resetAll()" class="glass-panel w-10 h-10 flex items-center justify-center hover:bg-red-500/10 transition-colors group" title="Factory Reset">
+                    <span class="iconify text-white/50 group-hover:text-red-400 transition-colors text-lg" data-icon="mdi:restart"></span>
+                </button>
+                <button onclick="openStudentHub(); document.getElementById('academic-setup-wizard').classList.remove('hidden')" class="glass-panel w-10 h-10 flex items-center justify-center hover:bg-brand-light/10 transition-colors group" title="Academic Settings">
+                    <span class="iconify text-white/50 group-hover:text-brand-light transition-colors text-lg" data-icon="mdi:cog"></span>
+                </button>
+            </div>
+        </header>
+
+        <!-- Main Workspace Areas -->
+        <div class="flex-1 w-full relative flex flex-col px-6 pb-64 pt-10 gap-6">
+            
+            <!-- Academic Agenda (Visible in Student Mode after Fetch) -->
+            <div id="main-academic-agenda" class="hidden w-full max-w-4xl mx-auto glass-panel p-6 border-brand-light/20 bg-brand-light/5 animate-fade mb-4">
+                <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+                    <div class="flex items-center gap-4">
+                        <div class="w-12 h-12 rounded-xl bg-brand-light/20 flex items-center justify-center text-brand-light shadow-[0_0_15px_rgba(90,138,106,0.4)]">
+                            <span class="iconify text-3xl" data-icon="mdi:auto-fix"></span>
+                        </div>
+                        <div>
+                            <h2 class="text-sm font-bold text-white uppercase tracking-widest">Active Academic Agenda</h2>
+                            <p class="text-[10px] text-white/50" id="agenda-status">
+                                Synced with <span id="display-batch" class="text-brand-light font-bold">...</span> database 
+                                <button onclick="document.getElementById('academic-setup-wizard').classList.remove('hidden')" class="ml-2 text-brand-light hover:text-white underline decoration-brand-light/30">Change</button>
+                            </p>
+                        </div>
+                    </div>
+                    
+                    <div class="flex flex-1 gap-6 w-full md:w-auto">
+                        <!-- Next Class -->
+                        <div class="flex-1 glass-panel px-4 py-2 border-white/5 bg-black/40">
+                            <div class="text-[9px] uppercase tracking-widest text-brand-light mb-1">Next Up</div>
+                            <div class="text-xs font-semibold text-white" id="agenda-next-class">Computing Core</div>
+                            <div class="text-[10px] text-white/40" id="agenda-next-class-sub">Pending Sync...</div>
+                        </div>
+                        <!-- Urgent Task -->
+                        <div id="agenda-task-panel" class="flex-1 glass-panel px-4 py-2 border-red-500/20 bg-red-500/5 transition-opacity duration-500">
+                            <div class="text-[9px] uppercase tracking-widest text-red-400 mb-1">Critical Task</div>
+                            <div class="text-xs font-semibold text-white" id="agenda-next-task">Neural Net Lab Report</div>
+                            <div class="text-[10px] text-red-400/60" id="agenda-next-task-sub">Due in 2 days</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Left Side: Integrations & Tasks (Initially Hidden, slides in) -->
+            <div id="side-panel" class="absolute left-6 top-0 bottom-6 w-80 z-40 flex flex-col gap-4 interactive transform -translate-x-[120%] transition-transform duration-500 opacity-0 pointer-events-none">
+                <div class="glass-panel p-4 flex-1 flex flex-col h-1/2">
+                    <div class="flex justify-between items-center mb-4">
+                        <h2 class="text-xs font-semibold uppercase tracking-widest text-white/60">Active Integrations</h2>
+                        <button onclick="simulateAutoAction()" title="Simulate Background Event" class="text-brand-light hover:text-white transition-colors">
+                            <span class="iconify" data-icon="mdi:lightning-bolt"></span>
+                        </button>
+                    </div>
+                    <div id="integrations-list" class="flex flex-col gap-2 overflow-y-auto pr-1 flex-1">
+                        <!-- JS injected -->
+                    </div>
+                </div>
+
+                <div class="glass-panel p-4 flex-1 flex flex-col h-1/2">
+                    <h2 class="text-xs font-semibold uppercase tracking-widest text-white/60 mb-4">Autonomous Log</h2>
+                    <div id="auto-log-list" class="flex flex-col gap-3 overflow-y-auto pr-1 flex-1">
+                        <!-- JS Injected -->
+                        <div class="text-xs text-white/30 italic text-center mt-4">Waiting for agent activity...</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Central Workspace Area for AI 3D Core with Professional Headings -->
+            <div class="relative flex flex-col items-center pointer-events-none z-10 text-center animate-fade w-full max-w-5xl px-4 pb-20 my-auto mx-auto">
+                <!-- Large Central Logo -->
+                <div class="w-48 h-48 mb-8 animate-float opacity-90 drop-shadow-[0_0_30px_rgba(62,107,78,0.4)]">
+                    <img src="logo.png" alt="Pragati Logo" class="w-full h-full object-contain filter drop-shadow-2xl">
+                </div>
+                
+                <h2 class="text-6xl md:text-8xl font-serif font-light tracking-tight text-white mb-4 shadow-black drop-shadow-2xl">Pragati<span class="text-brand-light">.</span></h2>
+                <h3 class="text-sm md:text-base text-brand-light uppercase tracking-[0.4em] font-bold mb-8">Autonomous Systems Operating Core</h3>
+                
+                <p class="max-w-2xl text-center text-base md:text-xl text-white/80 leading-relaxed font-medium mb-4 drop-shadow-[0_4px_4px_rgba(0,0,0,0.8)]">
+                    Aggregating isolated data layers via spatial reinforcement learning. Pragati autonomously organizes, negotiates, and executes your administrative obligations.
+                </p>
+                <p class="max-w-3xl text-center text-xs md:text-sm text-white/50 leading-relaxed drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">
+                    Connect your workspaces natively. Let the core digest emails, calendar events, and drive storage context. AI models process logic directly on-device to prevent context leakage, maximizing privacy while running automated background tasks.
+                </p>
+                
+                <!-- Capabilities / Work List (All Interactive) -->
+                <div id="capabilities-grid" class="mt-10 grid grid-cols-2 lg:grid-cols-4 gap-4 max-w-4xl mx-auto pointer-events-auto w-full px-6">
+                    <div onclick="handleClick(1)" class="glass-panel p-5 flex flex-col items-center justify-center gap-3 hover:bg-white/10 transition-all cursor-pointer border-t-2 border-t-brand/50 group active:scale-95 shadow-lg">
+                        <span class="iconify text-3xl text-brand-light group-hover:scale-110 transition-transform" id="cap-icon-1" data-icon="mdi:robot-outline"></span>
+                        <div class="flex flex-col items-center gap-1.5">
+                            <span class="text-xs font-semibold tracking-wider uppercase text-white/90 text-center leading-tight" id="cap-title-1">Autonomous<br>Execution</span>
+                            <span class="text-[11px] text-brand-light font-medium flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity" id="cap-btn-1"><span class="iconify" data-icon="mdi:play"></span> Launch Core</span>
+                            <span class="text-[11px] text-white/60 text-center group-hover:hidden" id="cap-desc-1">Drafts & sends follow-ups automatically</span>
+                        </div>
+                    </div>
+                    <div onclick="handleClick(2)" class="glass-panel p-5 flex flex-col items-center justify-center gap-3 hover:bg-white/10 transition-all cursor-pointer border-t-2 border-t-brand/50 group active:scale-95 shadow-lg">
+                        <span class="iconify text-3xl text-brand-light group-hover:scale-110 transition-transform" id="cap-icon-2" data-icon="mdi:brain"></span>
+                        <div class="flex flex-col items-center gap-1.5">
+                            <span class="text-xs font-semibold tracking-wider uppercase text-white/90 text-center leading-tight" id="cap-title-2">RL<br>Optimization</span>
+                            <span class="text-[11px] text-brand-light font-medium flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity" id="cap-btn-2"><span class="iconify" data-icon="mdi:magnify"></span> Analyze Graph</span>
+                            <span class="text-[11px] text-white/60 text-center group-hover:hidden" id="cap-desc-2">Learns your reward workflow topology</span>
+                        </div>
+                    </div>
+                    <div onclick="openPrimaryModal()" class="glass-panel p-5 flex flex-col items-center justify-center gap-3 hover:bg-white/10 transition-all cursor-pointer border-t-2 border-t-brand/50 group active:scale-95 shadow-lg">
+                        <span class="iconify text-3xl text-brand-light group-hover:scale-110 transition-transform" id="cap-icon-3" data-icon="mdi:calendar-sync-outline"></span>
+                        <div class="flex flex-col items-center gap-1.5">
+                            <span class="text-xs font-semibold tracking-wider uppercase text-white/90 text-center leading-tight" id="cap-title-3">Energy<br>Scheduling</span>
+                            <span class="text-[11px] text-brand-light font-medium flex items-center gap-1 animate-pulse" id="cap-btn-3"><span class="iconify" data-icon="mdi:lightning-bolt"></span> View Timetable</span>
+                        </div>
+                    </div>
+                    <div onclick="handleClick(4)" class="glass-panel p-5 flex flex-col items-center justify-center gap-3 hover:bg-white/10 transition-all cursor-pointer border-t-2 border-t-brand/50 group active:scale-95 shadow-lg">
+                        <span class="iconify text-3xl text-brand-light group-hover:scale-110 transition-transform" id="cap-icon-4" data-icon="mdi:shield-lock-outline"></span>
+                        <div class="flex flex-col items-center gap-1.5">
+                            <span class="text-xs font-semibold tracking-wider uppercase text-white/90 text-center leading-tight" id="cap-title-4">Privacy<br>Environment</span>
+                            <span class="text-[11px] text-brand-light font-medium flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity" id="cap-btn-4"><span class="iconify" data-icon="mdi:lock-open-outline"></span> Check Vault</span>
+                            <span class="text-[11px] text-white/60 text-center group-hover:hidden" id="cap-desc-4">Encrypted on-device memory extraction</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Claude Style Central Chat Interface -->
+    <div class="fixed bottom-0 left-1/2 transform -translate-x-1/2 w-full max-w-4xl z-50 flex flex-col items-center justify-end pointer-events-none pb-6 px-4">
+        
+        <!-- Hovering Chat History -->
+        <div id="chat-history" class="hidden w-full max-h-[40vh] overflow-y-auto flex-col gap-3 p-4 mb-2 pointer-events-auto rounded-xl mask-fade-top scroll-smooth">
+        </div>
+
+        <!-- Big Claude Pill Input -->
+        <div class="w-full glass-panel bg-black/40 border border-white/20 p-2 rounded-2xl pointer-events-auto shadow-[0_10px_40px_rgba(0,0,0,0.9)] backdrop-blur-3xl">
+            <form id="chat-form" onsubmit="handleChatSubmit(event)" class="relative flex items-center gap-2">
+                
+                <!-- Plugins Toggle ([+] Option) -->
+                <button type="button" onclick="toggleIntegrations()" class="w-12 h-12 flex-shrink-0 flex items-center justify-center rounded-xl bg-brand/20 hover:bg-brand-light/30 border border-brand/40 hover:border-brand-light transition-all text-brand-light hover:text-white group shadow-[0_0_15px_rgba(62,107,78,0.3)]" title="Manage Plugins">
+                    <span class="iconify text-2xl group-hover:rotate-90 transition-transform duration-300 font-bold" data-icon="mdi:plus"></span>
+                </button>
+
+                <!-- Chat Input Box -->
+                <input type="text" id="chat-input" class="flex-1 bg-transparent py-4 px-2 text-base md:text-lg focus:outline-none transition-all text-white placeholder-white/30 font-light" placeholder="Message Pragati or prompt an autonomous routine...">
+                
+                <!-- Submit -->
+                <button type="submit" class="w-12 h-12 flex-shrink-0 flex items-center justify-center rounded-xl bg-brand-light/20 text-brand-light hover:bg-brand-light hover:text-white transition-colors">
+                    <span class="iconify text-xl" data-icon="mdi:arrow-up"></span>
+                </button>
+            </form>
+            <!-- Meta Footer Info -->
+            <div class="px-4 pt-2 pb-1 flex justify-between items-center text-[10px] text-white/30 uppercase tracking-widest">
+                <span class="flex items-center gap-2"><span class="w-1.5 h-1.5 bg-brand-light rounded-full pulse-dot"></span> Core Memory Active</span>
+                <span id="rl-confidence" class="font-mono">CONF: 65% · Local Sandbox</span>
+            </div>
+        </div>
+    </div>
+
+
+
+    <!-- PAYMENT MODAL OVERLAY -->
+    <div id="payment-modal" class="fixed inset-0 z-[100] modal-overlay hidden items-center justify-center flex interactive opacity-0 transition-opacity duration-300">
+        <div class="glass-panel bg-ai-bg/90 w-full max-w-md rounded-xl overflow-hidden border border-brand/40 shadow-2xl transform scale-95 transition-transform duration-300" id="payment-dialog">
+            <!-- Header -->
+            <div class="px-6 pt-6 pb-4 border-b border-white/10 flex items-center gap-3">
+                <div class="w-10 h-10 rounded-lg flex items-center justify-center bg-brand-light/20 border border-brand-light/30 shadow-[0_0_15px_rgba(62,107,78,0.4)]">
+                    <span class="iconify text-2xl text-brand-light" data-icon="mdi:credit-card-chip-outline"></span>
+                </div>
+                <div>
+                    <div class="text-sm font-semibold text-white">Pragati Pro Plan</div>
+                    <div class="text-[10px] text-brand-light uppercase tracking-widest mt-0.5">Autonomous Systems Upgrade</div>
+                </div>
+            </div>
+            
+            <!-- Body -->
+            <div class="p-6">
+                <div class="mb-6 flex justify-between items-end border-b border-white/10 pb-4">
+                    <div>
+                        <div class="text-3xl font-serif text-white">₹499<span class="text-sm text-white/40 font-sans">/mo</span></div>
+                        <p class="text-xs text-white/50 mt-1">Billed monthly. Cancel anytime.</p>
+                    </div>
+                    <div class="text-right space-y-1">
+                        <div class="text-[10px] text-brand-light font-medium flex items-center gap-1 justify-end"><span class="iconify" data-icon="mdi:check"></span> Unlimited Extraction</div>
+                        <div class="text-[10px] text-brand-light font-medium flex items-center gap-1 justify-end"><span class="iconify" data-icon="mdi:check"></span> RL Topology</div>
+                    </div>
+                </div>
+
+                <div class="space-y-4">
+                    <div>
+                        <label class="text-[10px] font-semibold uppercase tracking-widest text-white/60 mb-2 block">Card Details</label>
+                        <div class="relative">
+                            <span class="iconify absolute left-3 top-2.5 text-white/30 text-lg" data-icon="mdi:credit-card-outline"></span>
+                            <input type="text" class="w-full bg-black/30 border border-white/20 rounded-md py-2.5 pl-10 pr-3 text-sm text-white focus:outline-none focus:border-brand-light transition-colors" placeholder="0000 0000 0000 0000">
+                        </div>
+                    </div>
+                    <div class="flex gap-4">
+                        <div class="flex-1">
+                            <label class="text-[10px] font-semibold uppercase tracking-widest text-white/60 mb-2 block">Expiry</label>
+                            <input type="text" class="w-full bg-black/30 border border-white/20 rounded-md py-2.5 px-3 text-center text-sm text-white focus:outline-none focus:border-brand-light transition-colors" placeholder="MM/YY">
+                        </div>
+                        <div class="flex-1">
+                            <label class="text-[10px] font-semibold uppercase tracking-widest text-white/60 mb-2 block">CVV</label>
+                            <div class="relative">
+                                <input type="text" class="w-full bg-black/30 border border-white/20 rounded-md py-2.5 px-3 text-center text-sm text-white focus:outline-none focus:border-brand-light transition-colors" placeholder="123">
+                                <span class="iconify absolute right-3 top-2.5 text-white/30 text-lg" data-icon="mdi:help-circle-outline" title="3 digits on back of card"></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Footer -->
+            <div class="p-4 border-t border-white/10 bg-black/20 flex gap-3 justify-end rounded-b-xl">
+                <button onclick="closePaymentModal()" class="px-4 py-2 text-xs font-semibold text-white/50 hover:text-white transition-colors">Cancel</button>
+                <button id="btn-pay" onclick="processPayment()" class="px-6 py-2 text-xs font-semibold bg-brand-light text-white rounded-md hover:bg-brand transition-colors glow-effect flex items-center justify-center min-w-[120px]">Upgrade Memory</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- LECTURE SYNC MODAL OVERLAY -->
+    <div id="lecture-modal" class="fixed inset-0 z-[110] modal-overlay hidden items-center justify-center flex interactive opacity-0 transition-opacity duration-300">
+        <div class="glass-panel bg-ai-bg/95 w-full max-w-4xl max-h-[85vh] rounded-2xl overflow-hidden border border-brand/50 shadow-2xl transform scale-95 transition-transform duration-300 flex flex-col" id="lecture-dialog">
+            <div class="px-8 pt-6 pb-4 border-b border-white/10 flex justify-between items-center bg-brand/5">
+                <div class="flex items-center gap-4">
+                    <div class="w-12 h-12 rounded-xl flex items-center justify-center bg-brand/20 border border-brand/40">
+                        <span class="iconify text-3xl text-brand-light" data-icon="mdi:microphone-outline"></span>
+                    </div>
+                    <div>
+                        <h2 class="text-xl font-serif text-white">Lecture Capture Core</h2>
+                        <span class="flex items-center gap-2 text-[10px] text-brand-light uppercase tracking-widest mt-0.5"><span class="w-1.5 h-1.5 bg-brand-light rounded-full animate-pulse"></span> Active Capture Pipeline</span>
+                    </div>
+                </div>
+                <button onclick="closeLectureModal()" class="p-2 text-white/40 hover:text-white transition-colors"><span class="iconify text-2xl" data-icon="mdi:close"></span></button>
+            </div>
+            <div class="p-8 flex-1 overflow-y-auto bg-black/40">
+                <div class="flex flex-col items-center justify-center py-10 mb-8 border-b border-white/5">
+                    <!-- CSS Waveform Simulation -->
+                    <div class="flex items-end gap-1 h-24 mb-6">
+                        <div class="w-1 bg-brand-light/40 rounded-full animate-[vibe_1.2s_infinite_ease-in-out]"></div>
+                        <div class="w-1 bg-brand-light/60 rounded-full animate-[vibe_0.8s_infinite_ease-in-out_0.2s]"></div>
+                        <div class="w-1 bg-brand-light rounded-full animate-[vibe_1s_infinite_ease-in-out_0.1s]"></div>
+                        <div class="w-1 bg-brand-light/30 rounded-full animate-[vibe_1.5s_infinite_ease-in-out_0.4s]"></div>
+                        <div class="w-1 bg-brand-light/70 rounded-full animate-[vibe_0.9s_infinite_ease-in-out_0.3s]"></div>
+                        <div class="w-1 bg-white/20 rounded-full animate-[vibe_1.1s_infinite_ease-in-out]"></div>
+                        <div class="w-1 bg-brand-light rounded-full animate-[vibe_0.7s_infinite_ease-in-out_0.2s]"></div>
+                    </div>
+                    <p class="text-sm font-mono text-white/80">INGESTING: <span class="text-brand-light italic">"The neural architecture of transformer models..."</span></p>
+                </div>
+                <div class="space-y-4">
+                    <h3 class="text-[11px] font-bold text-white/40 uppercase tracking-widest">Semantic Log (Real-time)</h3>
+                    <div class="space-y-3 font-mono text-xs">
+                        <div class="text-brand-light/80"><span class="text-white/20">[00:12:04]</span> Extracting core concept: Attention mechanism weights.</div>
+                        <div class="text-white/40"><span class="text-white/10">[00:12:15]</span> Cross-referencing previous lecture on gradient descent.</div>
+                        <div class="text-brand-light/80"><span class="text-white/20">[00:12:28]</span> Summarizing key lab requirements for Friday.</div>
+                    </div>
+                </div>
+            </div>
+            <div class="p-4 border-t border-white/10 bg-black/20 flex gap-4 justify-end">
+                <button class="px-5 py-2 text-[10px] font-bold uppercase border border-white/10 text-white/60 rounded hover:bg-white/5">Pause Stream</button>
+                <button class="px-5 py-2 text-[10px] font-bold uppercase bg-brand-light/20 border border-brand-light/40 text-brand-light rounded">Finalize Notes</button>
+            </div>
+        </div>
+    </div>
+
+    <style>
+        @keyframes vibe { 0%, 100% { height: 20px; } 50% { height: 80px; } }
+    </style>
+
+    <!-- ACADEMIC RL MODAL OVERLAY -->
+    <div id="path-modal" class="fixed inset-0 z-[110] modal-overlay hidden items-center justify-center flex interactive opacity-0 transition-opacity duration-300">
+        <div class="glass-panel bg-ai-bg/95 w-full max-w-4xl rounded-2xl overflow-hidden border border-brand/50 shadow-2xl transform scale-95 transition-transform duration-300 flex flex-col" id="path-dialog">
+            <div class="px-8 pt-6 pb-4 border-b border-white/10 flex justify-between items-center bg-brand/5">
+                <div class="flex items-center gap-4">
+                    <div class="w-12 h-12 rounded-xl flex items-center justify-center bg-brand/20 border border-brand/40">
+                        <span class="iconify text-3xl text-brand-light" data-icon="mdi:brain"></span>
+                    </div>
+                    <div>
+                        <h2 class="text-xl font-serif text-white">Neural Study Pathing</h2>
+                        <p class="text-[10px] text-brand-light uppercase tracking-widest mt-0.5">Reinforcement Learning Applied to Curriculum Mastery</p>
+                    </div>
+                </div>
+                <button onclick="closeModal('path')" class="p-2 text-white/40 hover:text-white transition-colors"><span class="iconify text-2xl" data-icon="mdi:close"></span></button>
+            </div>
+            <div class="p-8">
+                <p class="text-xs text-white/50 mb-6 font-light leading-relaxed">Pragati optimizes your study path by identifying nodes of highest cognitive friction and prioritizing retrieval practice in those areas.</p>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <div class="space-y-4">
+                        <h4 class="text-[11px] font-bold text-white/30 uppercase tracking-[0.2em]">Active Subject: Computer Architecture</h4>
+                        <div class="space-y-3">
+                            <div class="flex items-center gap-4 glass-panel p-3 border-l-4 border-l-brand-light bg-white/5">
+                                <span class="w-6 h-6 rounded-full bg-brand-light/20 flex items-center justify-center text-[10px] text-brand-light font-bold">1</span>
+                                <span class="text-xs text-white">Instruction Set Architectures (ISA)</span>
+                                <span class="ml-auto text-[10px] text-brand-light font-bold">100% DONE</span>
+                            </div>
+                            <div class="flex items-center gap-4 glass-panel p-3 border-l-4 border-l-yellow-500 bg-white/5">
+                                <span class="w-6 h-6 rounded-full bg-yellow-500/20 flex items-center justify-center text-[10px] text-yellow-500 font-bold">2</span>
+                                <span class="text-xs text-white">Pipelining & Logic Hazards</span>
+                                <span class="ml-auto text-[10px] text-yellow-500 font-bold">65% ACTIVE</span>
+                            </div>
+                            <div class="flex items-center gap-4 glass-panel p-3 border-l-4 border-white/5 opacity-40">
+                                <span class="w-6 h-6 rounded-full bg-white/10 flex items-center justify-center text-[10px] text-white/40 font-bold">3</span>
+                                <span class="text-xs text-white">Caching Hierarchies (L1-L3)</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="glass-panel bg-black/30 p-6 flex flex-col justify-center items-center text-center">
+                        <span class="iconify text-5xl text-brand-light/30 mb-4" data-icon="mdi:chart-scatter-plot"></span>
+                        <h5 class="text-sm font-medium text-white mb-2">Generate Subject Insight</h5>
+                        <p class="text-[10px] text-white/40 mb-4">Let Pragati digest your syllabus and current grades to output a retrieval path.</p>
+                        <button class="w-full py-2 bg-brand-light/20 border border-brand-light/40 text-brand-light text-[10px] font-bold uppercase rounded hover:bg-brand-light hover:text-white transition-all">Scan New Syllabus</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ACADEMIC CLOUD MODAL OVERLAY -->
+    <div id="cloud-modal" class="fixed inset-0 z-[110] modal-overlay hidden items-center justify-center flex interactive opacity-0 transition-opacity duration-300">
+        <div class="glass-panel bg-ai-bg/95 w-full max-w-3xl rounded-2xl overflow-hidden border border-brand/50 shadow-2xl transform scale-95 transition-transform duration-300 flex flex-col" id="cloud-dialog">
+            <div class="px-8 pt-6 pb-4 border-b border-white/10 flex justify-between items-center bg-brand/5">
+                <div class="flex items-center gap-4">
+                    <div class="w-12 h-12 rounded-xl flex items-center justify-center bg-brand/20 border border-brand/40">
+                        <span class="iconify text-3xl text-brand-light" data-icon="mdi:cloud-check"></span>
+                    </div>
+                    <div>
+                        <h2 class="text-xl font-serif text-white">Academic Cloud Storage</h2>
+                        <p class="text-[10px] text-brand-light uppercase tracking-widest mt-0.5">Unified Research Drive — 128-bit Encrypted</p>
+                    </div>
+                </div>
+                <button onclick="closeModal('cloud')" class="p-2 text-white/40 hover:text-white transition-colors"><span class="iconify text-2xl" data-icon="mdi:close"></span></button>
+            </div>
+            <div class="p-6">
+                <div class="grid grid-cols-2 lg:grid-cols-3 gap-4">
+                    <div class="glass-panel p-4 flex flex-col items-center gap-2 hover:bg-white/5 border border-white/10 transition-colors cursor-pointer group">
+                        <span class="iconify text-3xl text-blue-400 opacity-60 group-hover:opacity-100" data-icon="mdi:file-pdf-box"></span>
+                        <span class="text-xs text-white/80">ML_Paper_v2.pdf</span>
+                    </div>
+                    <div class="glass-panel p-4 flex flex-col items-center gap-2 hover:bg-white/5 border border-white/10 transition-colors cursor-pointer group">
+                        <span class="iconify text-3xl text-yellow-400 opacity-60 group-hover:opacity-100" data-icon="mdi:file-certificate"></span>
+                        <span class="text-xs text-white/80">Notes_Sept_14.txt</span>
+                    </div>
+                    <div class="glass-panel p-4 flex flex-col items-center gap-2 hover:bg-white/5 border border-white/10 transition-colors cursor-pointer group">
+                        <span class="iconify text-3xl text-red-500 opacity-60 group-hover:opacity-100" data-icon="mdi:file-image"></span>
+                        <span class="text-xs text-white/80">Lab_Diagram_A.jpg</span>
+                    </div>
+                </div>
+                <div class="mt-8 pt-6 border-t border-white/10 flex items-center justify-between">
+                    <div class="text-[10px] text-white/40">STORAGE: 4.2 GB / 50 GB · Managed by Academic Core</div>
+                    <button class="text-brand-light text-[10px] font-bold uppercase hover:underline">Synchronize All Nodes</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- OAUTH MODAL OVERLAY -->
+    <div id="oauth-modal" class="fixed inset-0 z-[150] modal-overlay hidden items-center justify-center flex interactive opacity-0 transition-opacity duration-300">
+        <div class="glass-panel bg-ai-bg/95 w-full max-w-md p-8 border border-brand/50 shadow-2xl transform scale-95 transition-transform duration-300" id="oauth-dialog">
+            <div class="flex items-center gap-4 mb-8">
+                <div id="oauth-icon" class="w-12 h-12 rounded-xl flex items-center justify-center bg-brand/20">
+                    <span id="oauth-icon-svg" class="iconify text-3xl" data-icon="mdi:api"></span>
+                </div>
+                <div>
+                    <h2 id="oauth-title" class="text-xl font-serif text-white">Initialize Link</h2>
+                    <p class="text-[10px] text-brand-light uppercase tracking-widest mt-1">Pragati Secure Handshake</p>
+                </div>
+            </div>
+
+            <div id="oauth-scopes-container" class="space-y-4 mb-8">
+                <h3 class="text-[10px] font-bold text-white/40 uppercase tracking-widest">Requested Permissions:</h3>
+                <div class="space-y-2">
+                    <div class="flex items-center gap-2 text-xs text-white/80">
+                        <span class="iconify text-brand-light" data-icon="mdi:check-circle"></span>
+                        <span id="oauth-scope-1">Extract neural context</span>
+                    </div>
+                    <div class="flex items-center gap-2 text-xs text-white/80">
+                        <span class="iconify text-brand-light" data-icon="mdi:check-circle"></span>
+                        <span id="oauth-scope-2">Map environmental topology</span>
+                    </div>
+                </div>
+            </div>
+
+            <div id="oauth-input-container" class="space-y-2 mb-8">
+                <label id="oauth-input-label" class="text-[10px] uppercase tracking-widest font-bold text-brand-light pl-1">Identifier</label>
+                <input type="text" id="oauth-input" class="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-brand-light transition-all" placeholder="Enter key or email...">
+            </div>
+
+            <div id="oauth-loading" class="flex-col items-center justify-center py-8 hidden">
+                <span class="iconify text-4xl text-brand-light animate-spin mb-4" data-icon="mdi:loading"></span>
+                <p id="oauth-loading-text" class="text-xs font-mono text-white/40">Synchronizing synapses...</p>
+            </div>
+
+            <div id="oauth-footer" class="flex gap-4">
+                <button onclick="closeOAuth()" class="flex-1 px-6 py-3 text-xs font-bold uppercase border border-white/10 text-white/60 rounded-xl hover:bg-white/5 transition-all">Abort</button>
+                <button onclick="allowOAuth()" class="flex-1 px-6 py-3 text-xs font-bold uppercase bg-brand-light text-black rounded-xl hover:bg-white transition-all glow-effect shadow-glow">Authorize</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- STUDENT HUB MODAL -->
+    <div id="student-modal" class="fixed inset-0 z-[110] modal-overlay hidden items-center justify-center flex interactive opacity-0 transition-opacity duration-300">
+        <div class="glass-panel bg-ai-bg/95 w-full max-w-4xl rounded-2xl overflow-hidden border border-brand/50 shadow-2xl transform scale-95 transition-transform duration-300 flex flex-col" id="student-dialog">
+            <div class="px-8 pt-6 pb-4 border-b border-white/10 flex justify-between items-center bg-brand/5">
+                <div class="flex items-center gap-4">
+                    <div class="w-12 h-12 rounded-xl flex items-center justify-center bg-brand/20 border border-brand/40">
+                        <span class="iconify text-3xl text-brand-light" data-icon="mdi:school-outline"></span>
+                    </div>
+                    <div>
+                        <h2 class="text-xl font-serif text-white">Student Hub</h2>
+                        <p class="text-[10px] text-brand-light uppercase tracking-widest mt-0.5">Academic Focus Environment</p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-6">
+                    <!-- Pomodoro Timer -->
+                    <div class="flex items-center gap-3 bg-black/40 px-4 py-2 rounded-lg border border-white/5">
+                        <span class="iconify text-xl text-red-400 animate-pulse" data-icon="mdi:timer-outline"></span>
+                        <div class="text-lg font-mono text-white" id="pomo-timer">25:00</div>
+                        <button onclick="togglePomo()" class="text-[10px] uppercase font-bold text-brand-light hover:text-white transition-colors">Start Session</button>
+                    </div>
+                    <button onclick="closeStudentHub()" class="p-2 text-white/40 hover:text-white transition-colors">
+                        <span class="iconify text-2xl" data-icon="mdi:close"></span>
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Onboarding Wizard Overlay -->
+            <div id="academic-setup-wizard" class="absolute inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-8 hidden">
+                <button onclick="closeStudentHub()" class="absolute top-8 right-8 p-2 text-white/40 hover:text-white transition-colors z-[60]">
+                    <span class="iconify text-2xl" data-icon="mdi:close"></span>
+                </button>
+                <div class="w-full max-w-md space-y-8 animate-fade">
+                    <div class="text-center">
+                        <div class="w-16 h-16 bg-brand-light/20 rounded-2xl flex items-center justify-center mx-auto mb-6 border border-brand-light/40 shadow-glow">
+                            <span class="iconify text-4xl text-brand-light" data-icon="mdi:school-outline"></span>
+                        </div>
+                        <h3 class="text-2xl font-serif text-white mb-2">Initialize Academic Link</h3>
+                        <p class="text-sm text-white/40">Enter your credentials to bridge the college timetable database</p>
+                    </div>
+
+                    <div class="space-y-4">
+                        <div class="space-y-2">
+                            <label class="text-[10px] uppercase tracking-widest font-bold text-brand-light pl-1">College Email</label>
+                            <input type="email" id="setup-email" class="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-brand-light transition-all shadow-inner" placeholder="name@college.edu">
+                        </div>
+                        <div class="space-y-2">
+                            <label class="text-[10px] uppercase tracking-widest font-bold text-brand-light pl-1">Batch / Section</label>
+                            <input type="text" id="setup-batch" class="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-brand-light transition-all shadow-inner" placeholder="e.g. CSE-2024 Section A">
+                        </div>
+                        <div class="space-y-4 pt-2">
+                            <div class="flex items-center justify-between p-3 rounded-xl border border-white/5 bg-white/[0.02] hover:bg-white/5 transition-all cursor-pointer group" onclick="document.getElementById('setup-gmail-sync').click()">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-8 h-8 rounded-lg bg-red-400/20 flex items-center justify-center text-red-400">
+                                        <span class="iconify" data-icon="mdi:gmail"></span>
+                                    </div>
+                                    <div>
+                                        <div class="text-[10px] font-bold text-white">Bridge University Gmail</div>
+                                        <div class="text-[9px] text-white/40">Auto-ingest classroom & exam alerts</div>
+                                    </div>
+                                </div>
+                                <input type="checkbox" id="setup-gmail-sync" class="w-4 h-4 rounded border-brand/40 bg-black/40 text-brand-light focus:ring-brand-light accent-brand-light cursor-pointer">
+                            </div>
+                        </div>
+                        <button onclick="startAcademicAuthorization()" class="w-full bg-brand-light text-black font-bold py-4 rounded-xl hover:bg-white transition-all shadow-glow uppercase tracking-widest text-xs mt-4">Establish Neural Link</button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Body (Restored Detailed Content) -->
+            <div class="p-8 flex-1 overflow-y-auto">
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                    <!-- Left Column: Upcoming Assignments -->
+                    <div class="lg:col-span-1 space-y-6">
+                        <h3 class="text-xs font-semibold uppercase tracking-widest text-white/60 mb-4 flex items-center justify-between">
+                            <span class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-red-400"></span> Critical Deadlines</span>
+                            <span class="text-[9px] text-white/30 font-mono" id="task-counter">0 ITEMS</span>
+                        </h3>
+                        
+                        <!-- Quick Synergize Input -->
+                        <div class="glass-panel p-3 bg-brand/5 border border-brand/20 mb-4">
+                            <div class="flex flex-col gap-2">
+                                <input type="text" id="new-task-title" placeholder="Register new task..." class="bg-black/40 border border-white/10 text-xs text-white rounded-lg px-3 py-2 outline-none focus:border-brand-light transition-all">
+                                <div class="grid grid-cols-2 gap-2">
+                                    <select id="new-task-prio" class="bg-black/60 border border-white/10 text-[10px] text-white/60 rounded-lg px-2 py-1.5 outline-none font-bold uppercase tracking-widest">
+                                        <option value="medium">Medium</option>
+                                        <option value="high">High</option>
+                                        <option value="critical">Critical</option>
+                                    </select>
+                                    <input type="text" id="new-task-time" placeholder="HH:MM (Optional)" class="bg-black/60 border border-white/10 text-[10px] text-white/50 rounded-lg px-3 py-1.5 outline-none font-mono">
+                                </div>
+                                <button onclick="addNewTask()" class="w-full bg-brand-light/90 hover:bg-white text-black text-[10px] font-bold py-2 rounded-lg uppercase tracking-widest transition-all">Synergize</button>
+                            </div>
+                        </div>
+
+                        <div class="space-y-3" id="academic-task-list">
+                            <!-- Tasks injected dynamically via renderAcademicTasks() -->
+                        </div>
+                        
+                        <!-- Study Focus Metric -->
+                        <div class="glass-panel p-5 bg-black/40 border border-white/5 rounded-xl mt-8">
+                             <h3 class="text-[11px] font-semibold uppercase tracking-widest text-brand-light mb-4">Weekly Focus Index</h3>
+                             <div class="h-2 w-full bg-white/5 rounded-full overflow-hidden mb-2">
+                                <div class="h-full bg-brand-light shadow-[0_0_10px_rgba(90,138,106,0.6)]" style="width: 78%;"></div>
+                             </div>
+                             <p class="text-[10px] text-white/40 text-center font-mono">78% Retention Capacity</p>
+                        </div>
+
+                        <!-- Neural Test Lab (NEW DEMO) -->
+                        <div class="glass-panel p-5 bg-purple-500/5 border border-purple-500/20 rounded-xl mt-6 relative overflow-hidden group">
+                             <div class="absolute top-0 right-0 p-2 opacity-20 group-hover:opacity-100 transition-opacity">
+                                <span class="iconify text-purple-400 animate-spin-slow" data-icon="mdi:loading"></span>
+                             </div>
+                             <h3 class="text-[11px] font-semibold uppercase tracking-widest text-purple-400 mb-2">Neural Test Lab</h3>
+                             <p class="text-[10px] text-white/50 mb-4">Run an autonomous semantic audit of current data nodes.</p>
+                             <button onclick="triggerNeuralAudit()" class="w-full py-2 bg-purple-500/20 border border-purple-500/40 text-purple-400 text-[10px] font-bold uppercase rounded hover:bg-purple-500/30 transition-all flex items-center justify-center gap-2">
+                                <span class="iconify" data-icon="mdi:play"></span> Start Autonomous Work
+                             </button>
+                        </div>
+                    </div>
+
+                    <!-- Right Column: Integrated Daily Flow -->
+                    <div class="lg:col-span-2 space-y-4">
+                        <!-- Proactive Planning Card -->
+                        <div id="planning-reminder-card" class="glass-panel p-5 bg-brand/10 border border-brand/40 rounded-xl mb-4 hidden animate-pulse-slow">
+                            <div class="flex items-center gap-3 mb-2">
+                                <span class="iconify text-xl text-brand-light" data-icon="mdi:creation"></span>
+                                <h4 class="text-xs font-bold text-white uppercase tracking-widest">Tomorrow's trajectory</h4>
+                            </div>
+                            <p class="text-[10px] text-white/60 mb-3">System reflects it's 6:00 PM. Optimize tomorrow's Neural Flow now by updating your tasks and batch sync.</p>
+                            <button onclick="document.getElementById('academic-setup-wizard').classList.remove('hidden')" class="text-[9px] font-bold text-brand-light uppercase bg-brand/20 px-3 py-1.5 rounded hover:bg-brand/30 transition-all">Set Agenda</button>
+                        </div>
+
+                        <div class="flex justify-between items-end mb-2">
+                            <h3 class="text-xs font-semibold uppercase tracking-widest text-brand-light">Neural daily flow</h3>
+                            <div class="flex items-center gap-4">
+                                <button onclick="togglePlanningDay()" id="plan-day-btn" class="text-[10px] text-purple-400 hover:text-white uppercase tracking-widest font-bold flex items-center gap-1 transition-all">
+                                    <span class="iconify" data-icon="mdi:fast-forward"></span> Plan Tomorrow
+                                </button>
+                                <button onclick="openTimetable()" class="text-[10px] text-brand-light hover:text-white uppercase tracking-widest font-bold flex items-center gap-1 transition-all">
+                                    <span class="iconify" data-icon="mdi:calendar-week"></span> View Full Week
+                                </button>
+                                <div class="text-[10px] text-white/40 font-mono" id="current-flow-date">TODAY</div>
+                            </div>
+                        </div>
+                        
+                        <div class="space-y-4" id="lecture-schedule-container">
+                            <!-- Lectures injected dynamically via renderSchedule() -->
+                            <p class="text-xs text-white/30 italic text-center py-10">Neural timetable pending sync...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Footer -->
+            <div class="p-4 border-t border-white/10 bg-black/20 flex gap-4 justify-between items-center rounded-b-xl">
+                <div class="text-[10px] text-white/40 uppercase tracking-widest pl-4">Next Class: ML Seminar at 09:00 AM tomorrow</div>
+                <div class="flex gap-3">
+                    <button onclick="closeStudentHub()" class="px-6 py-2 text-[10px] font-semibold tracking-widest uppercase bg-brand-light/10 text-white rounded-md border border-brand-light/40 hover:bg-brand-light/20 transition-all">Daily Recap</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- FULL TIMETABLE MODAL -->
+    <div id="timetable-modal" class="fixed inset-0 z-[160] modal-overlay hidden items-center justify-center flex interactive opacity-0 transition-opacity duration-300">
+        <div class="glass-panel bg-ai-bg/98 w-full max-w-5xl h-[80vh] flex flex-col border border-brand/50 shadow-2xl transform scale-95 transition-transform duration-300" id="timetable-dialog">
+            <div class="p-6 border-b border-white/10 flex justify-between items-center bg-brand/5">
+                <div class="flex items-center gap-4">
+                    <div class="w-10 h-10 rounded-lg bg-brand/20 flex items-center justify-center border border-brand/40">
+                        <span class="iconify text-2xl text-brand-light" data-icon="mdi:calendar-multiselect"></span>
+                    </div>
+                    <div>
+                        <h2 class="text-lg font-serif text-white">Academic Calendar</h2>
+                        <div class="flex items-center gap-2">
+                            <p class="text-[9px] text-brand-light uppercase tracking-widest">Global Weekly Class Map · Batch <span id="timetable-display-batch" class="font-bold underline">...</span></p>
+                            <button onclick="closeModal('timetable'); openStudentHub();" class="text-[9px] text-white/40 hover:text-white uppercase tracking-widest font-bold ml-2">Change</button>
+                        </div>
+                    </div>
+                </div>
+                <button onclick="closeModal('timetable')" class="p-2 text-white/40 hover:text-white transition-colors"><span class="iconify text-2xl" data-icon="mdi:close"></span></button>
+            </div>
+            <div class="flex-1 overflow-auto p-4 bg-black/40">
+                <div class="grid grid-cols-5 gap-4 h-full min-w-[800px]" id="weekly-grid">
+                    <!-- Days injected here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============================================ -->
+    <!-- NEURO-ADAPTIVE FLOATING SOS BUTTON          -->
+    <!-- ============================================ -->
+    <button id="neuro-sos-btn" onclick="toggleNeuroPanel()" 
+        class="fixed bottom-8 left-8 z-[190] w-14 h-14 rounded-2xl bg-purple-900/40 backdrop-blur-xl border border-purple-500/30 flex items-center justify-center cursor-pointer group interactive"
+        title="I Need Help — Neuro-Adaptive Controls">
+        <span class="iconify text-2xl text-purple-300 group-hover:text-white transition-colors" data-icon="mdi:head-snowflake-outline"></span>
+    </button>
+
+    <!-- ============================================ -->
+    <!-- NEURO-ADAPTIVE PANEL OVERLAY                -->
+    <!-- ============================================ -->
+    <div id="neuro-panel-overlay" class="fixed inset-0 z-[185] hidden interactive" onclick="closeNeuroPanel(event)">
+        <div id="neuro-panel" class="fixed bottom-24 left-8 z-[186] w-[420px] max-h-[75vh] overflow-y-auto glass-panel bg-ai-bg/95 border border-purple-500/30 rounded-2xl shadow-2xl neuro-panel-enter">
+            
+            <!-- Panel Header -->
+            <div class="px-6 pt-5 pb-4 border-b border-white/10 bg-purple-900/10">
+                <div class="flex items-center justify-between mb-1">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-xl bg-purple-500/15 flex items-center justify-center border border-purple-500/30">
+                            <span class="iconify text-xl text-purple-400" data-icon="mdi:head-snowflake-outline"></span>
+                        </div>
+                        <div>
+                            <h3 class="text-sm font-semibold text-white">Neuro-Adaptive Controls</h3>
+                            <p class="text-[9px] text-purple-400 uppercase tracking-widest mt-0.5">Managing State, Not Time</p>
+                        </div>
+                    </div>
+                    <button onclick="closeNeuroPanelDirect()" class="p-1 text-white/30 hover:text-white transition-colors">
+                        <span class="iconify text-lg" data-icon="mdi:close"></span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Bandwidth Selector -->
+            <div class="px-6 pt-5 pb-4">
+                <h4 class="text-[10px] font-bold text-white/40 uppercase tracking-widest mb-3">Cognitive Bandwidth</h4>
+                <div class="grid grid-cols-4 gap-2" id="bandwidth-selector">
+                    <div class="bw-option bw-high" data-bw="high" onclick="setBandwidth('high')">
+                        <div class="text-lg mb-1">⚡</div>
+                        <div class="text-[9px] font-bold uppercase tracking-wider">High</div>
+                        <div class="text-[8px] opacity-50 mt-0.5">Full focus</div>
+                    </div>
+                    <div class="bw-option bw-medium" data-bw="medium" onclick="setBandwidth('medium')">
+                        <div class="text-lg mb-1">🌤</div>
+                        <div class="text-[9px] font-bold uppercase tracking-wider">Medium</div>
+                        <div class="text-[8px] opacity-50 mt-0.5">Moderate</div>
+                    </div>
+                    <div class="bw-option bw-low" data-bw="low" onclick="setBandwidth('low')">
+                        <div class="text-lg mb-1">🌊</div>
+                        <div class="text-[9px] font-bold uppercase tracking-wider">Low</div>
+                        <div class="text-[8px] opacity-50 mt-0.5">Gentle mode</div>
+                    </div>
+                    <div class="bw-option bw-zero" data-bw="zero" onclick="setBandwidth('zero')">
+                        <div class="text-lg mb-1">🕊️</div>
+                        <div class="text-[9px] font-bold uppercase tracking-wider">Zero</div>
+                        <div class="text-[8px] opacity-50 mt-0.5">Rest mode</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Condition Presets -->
+            <div class="px-6 pb-4">
+                <h4 class="text-[10px] font-bold text-white/40 uppercase tracking-widest mb-3">What's happening right now?</h4>
+                <div class="flex flex-wrap gap-2" id="condition-presets">
+                    <button class="condition-chip" data-condition="adhd" onclick="toggleCondition('adhd')">
+                        <span class="iconify text-sm" data-icon="mdi:lightning-bolt-circle"></span> ADHD Spiral
+                    </button>
+                    <button class="condition-chip" data-condition="burnout" onclick="toggleCondition('burnout')">
+                        <span class="iconify text-sm" data-icon="mdi:fire-alert"></span> Burnout
+                    </button>
+                    <button class="condition-chip" data-condition="sensory" onclick="toggleCondition('sensory')">
+                        <span class="iconify text-sm" data-icon="mdi:volume-off"></span> Sensory Overload
+                    </button>
+                    <button class="condition-chip" data-condition="paralysis" onclick="toggleCondition('paralysis')">
+                        <span class="iconify text-sm" data-icon="mdi:pause-circle-outline"></span> Executive Paralysis
+                    </button>
+                </div>
+            </div>
+
+            <!-- Sensory Friction Toggle -->
+            <div class="px-6 pb-4">
+                <div class="flex items-center justify-between p-3 rounded-xl border border-white/5 bg-white/[0.02] hover:bg-white/5 transition-all cursor-pointer" onclick="toggleSensoryFriction()">
+                    <div class="flex items-center gap-3">
+                        <div class="w-8 h-8 rounded-lg bg-amber-400/10 flex items-center justify-center">
+                            <span class="iconify text-amber-400" data-icon="mdi:ear-hearing-off"></span>
+                        </div>
+                        <div>
+                            <div class="text-[10px] font-bold text-white">Sensory Friction Active</div>
+                            <div class="text-[9px] text-white/40">External noise / interruptions / clutter</div>
+                        </div>
+                    </div>
+                    <div id="friction-toggle" class="w-10 h-5 rounded-full bg-white/10 border border-white/10 relative transition-all cursor-pointer">
+                        <div id="friction-toggle-dot" class="absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white/40 transition-all"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Emergency Mode -->
+            <div class="px-6 pb-4">
+                <button id="emergency-mode-btn" onclick="activateEmergencyMode()" 
+                    class="w-full py-3 rounded-xl border border-red-500/20 bg-red-500/5 hover:bg-red-500/10 transition-all flex items-center justify-center gap-3 group">
+                    <span class="iconify text-lg text-red-400/60 group-hover:text-red-400 transition-colors" data-icon="mdi:shield-alert-outline"></span>
+                    <span class="text-[10px] font-bold uppercase tracking-widest text-red-400/60 group-hover:text-red-400 transition-colors" id="emergency-btn-text">Activate Emergency Mode</span>
+                </button>
+                <p class="text-[8px] text-white/20 text-center mt-2">Strips all animations, reduces to essential tasks only</p>
+            </div>
+
+            <!-- Guided Recovery (Visible in Low/Zero modes) -->
+            <div id="guided-recovery" class="px-6 pb-5 hidden">
+                <div class="recovery-card">
+                    <div class="flex items-center gap-2 mb-3">
+                        <span class="iconify text-blue-300" data-icon="mdi:spa-outline"></span>
+                        <h4 class="text-[10px] font-bold text-blue-300 uppercase tracking-widest">Guided Recovery</h4>
+                    </div>
+                    <div class="space-y-2" id="recovery-suggestions">
+                        <div class="flex items-center gap-2 text-[10px] text-white/60">
+                            <span class="iconify text-blue-300/40" data-icon="mdi:check-circle-outline"></span>
+                            Take 5 deep breaths. Close your eyes.
+                        </div>
+                        <div class="flex items-center gap-2 text-[10px] text-white/60">
+                            <span class="iconify text-blue-300/40" data-icon="mdi:check-circle-outline"></span>
+                            Move to a quieter space if possible.
+                        </div>
+                        <div class="flex items-center gap-2 text-[10px] text-white/60">
+                            <span class="iconify text-blue-300/40" data-icon="mdi:check-circle-outline"></span>
+                            Your tasks are safe. Nothing is lost.
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Bandwidth Status Footer -->
+            <div class="px-6 py-3 border-t border-white/5 bg-black/20 rounded-b-2xl flex justify-between items-center">
+                <div class="flex items-center gap-2">
+                    <div class="w-2 h-2 rounded-full" id="neuro-status-dot"></div>
+                    <span class="text-[9px] text-white/40 uppercase tracking-widest" id="neuro-status-label">Bandwidth: High</span>
+                </div>
+                <span class="text-[8px] text-white/20 font-mono" id="neuro-missed-count"></span>
+            </div>
+        </div>
+    </div>
+
+    <!-- BANDWIDTH INDICATOR IN HEADER (injected via JS) -->
+    <!-- The bandwidth status is shown inline in the header via updateBandwidthUI() -->
+
+    <!-- DOWN-SHIFT SUGGESTION MODAL -->
+    <div id="downshift-modal" class="fixed inset-0 z-[195] hidden items-center justify-center flex interactive" style="background: rgba(0,0,0,0.5); backdrop-filter: blur(6px);">
+        <div class="glass-panel bg-ai-bg/95 w-full max-w-sm p-6 border border-purple-500/30 rounded-2xl shadow-2xl text-center neuro-panel-enter">
+            <div class="w-14 h-14 bg-purple-500/10 rounded-2xl flex items-center justify-center mx-auto mb-4 border border-purple-500/30">
+                <span class="iconify text-3xl text-purple-400" data-icon="mdi:head-heart-outline"></span>
+            </div>
+            <h3 class="text-lg font-serif text-white mb-2">Gentle Check-In</h3>
+            <p class="text-xs text-white/50 mb-6 leading-relaxed" id="downshift-message">
+                It looks like you've been struggling with tasks. Would you like to switch to a gentler mode? Your tasks are safe.
+            </p>
+            <div class="flex gap-3">
+                <button onclick="dismissDownshift()" class="flex-1 px-4 py-2.5 text-[10px] font-bold uppercase tracking-widest border border-white/10 text-white/50 rounded-xl hover:bg-white/5 transition-all">I'm OK</button>
+                <button onclick="acceptDownshift()" class="flex-1 px-4 py-2.5 text-[10px] font-bold uppercase tracking-widest bg-purple-500/20 border border-purple-500/40 text-purple-300 rounded-xl hover:bg-purple-500/30 transition-all">Switch to Low</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- TOAST CONTAINER -->
+    <div id="toast-wrapper" class="fixed top-6 left-1/2 transform -translate-x-1/2 z-[200] flex flex-col gap-2 pointer-events-none"></div>
+
+    <script>
+        /**************************************************************
+         * THREE.JS BACKGROUND CORE
+         **************************************************************/
+        let scene, camera, renderer, particles, orbMesh;
+        let aiState = 'idle'; // idle, connecting, processing
+        let time = 0;
+
+        function init3D() {
+            const canvas = document.getElementById('bg-canvas');
+            scene = new THREE.Scene();
+            
+            // Camera
+            camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.z = 25;
+            camera.position.x = -5; // Offset slightly left to balance the right chat panel
+
+            // Renderer
+            renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+
+            // Core Orb (Inner)
+            const orbGeo = new THREE.IcosahedronGeometry(4, 4);
+            const orbMat = new THREE.MeshBasicMaterial({ 
+                color: 0x1A2F22, 
+                wireframe: true, 
+                transparent: true, 
+                opacity: 0.3 
+            });
+            orbMesh = new THREE.Mesh(orbGeo, orbMat);
+            scene.add(orbMesh);
+
+            // Particle System Core
+            const particleCount = 2000;
+            const posArray = new Float32Array(particleCount * 3);
+            const colorArray = new Float32Array(particleCount * 3);
+
+            const colorBrand = new THREE.Color(0x3E6B4E);
+            const colorLight = new THREE.Color(0x5A8A6A);
+
+            for (let i = 0; i < particleCount * 3; i+=3) {
+                // Sphere distribution
+                const r = 8 + (Math.random() * 2);
+                const theta = 2 * Math.PI * Math.random();
+                const phi = Math.acos(2 * Math.random() - 1);
+                
+                posArray[i] = r * Math.sin(phi) * Math.cos(theta);     // x
+                posArray[i+1] = r * Math.sin(phi) * Math.sin(theta);   // y
+                posArray[i+2] = r * Math.cos(phi);                     // z
+
+                // Alternating colors
+                const c = Math.random() > 0.5 ? colorBrand : colorLight;
+                colorArray[i] = c.r;
+                colorArray[i+1] = c.g;
+                colorArray[i+2] = c.b;
+            }
+
+            const particlesGeo = new THREE.BufferGeometry();
+            particlesGeo.setAttribute('position', new THREE.BufferAttribute(posArray, 3));
+            particlesGeo.setAttribute('color', new THREE.BufferAttribute(colorArray, 3));
+
+            // Texture for glow
+            const canvas2d = document.createElement('canvas');
+            canvas2d.width = 16;
+            canvas2d.height = 16;
+            const ctx = canvas2d.getContext('2d');
+            const gradient = ctx.createRadialGradient(8, 8, 0, 8, 8, 8);
+            gradient.addColorStop(0, 'rgba(255,255,255,1)');
+            gradient.addColorStop(1, 'rgba(255,255,255,0)');
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, 16, 16);
+            const particleTexture = new THREE.CanvasTexture(canvas2d);
+
+            const particlesMat = new THREE.PointsMaterial({
+                size: 0.15,
+                vertexColors: true,
+                map: particleTexture,
+                transparent: true,
+                opacity: 0.8,
+                blending: THREE.AdditiveBlending,
+                depthWrite: false
+            });
+
+            particles = new THREE.Points(particlesGeo, particlesMat);
+            scene.add(particles);
+
+            // Lights
+            const ambient = new THREE.AmbientLight(0xffffff, 0.5);
+            scene.add(ambient);
+
+            // Mouse interaction
+            document.addEventListener('mousemove', (e) => {
+                const mouseX = (e.clientX / window.innerWidth - 0.5) * 2;
+                const mouseY = (e.clientY / window.innerHeight - 0.5) * 2;
+                gsap.to(scene.rotation, {
+                    x: mouseY * 0.2,
+                    y: mouseX * 0.2,
+                    duration: 2
+                });
+            });
+
+            window.addEventListener('resize', () => {
+                camera.aspect = window.innerWidth / window.innerHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize(window.innerWidth, window.innerHeight);
+            });
+
+            animate3D();
+        }
+
+        function animate3D() {
+            requestAnimationFrame(animate3D);
+            time += 0.005;
+
+            // Base rotation
+            particles.rotation.y += 0.001;
+            orbMesh.rotation.x -= 0.002;
+            orbMesh.rotation.y -= 0.003;
+
+            // State specific animations
+            if (aiState === 'connecting' || aiState === 'processing') {
+                particles.rotation.y += 0.01;
+                orbMesh.scale.set(1.05 + Math.sin(time*20)*0.05, 1.05 + Math.sin(time*20)*0.05, 1.05 + Math.sin(time*20)*0.05);
+            } else {
+                orbMesh.scale.setScalar(1 + Math.sin(time * 5) * 0.02); // gentle breathing
+            }
+
+            // Wave effect on particles
+            const positions = particles.geometry.attributes.position.array;
+            for(let i=0; i<positions.length; i+=3) {
+                const offset = Math.sin(time * 5 + positions[i]) * 0.01;
+                positions[i] += offset;
+                positions[i+1] += offset;
+            }
+            particles.geometry.attributes.position.needsUpdate = true;
+
+            renderer.render(scene, camera);
+        }
+
+        function setAIState(newState) {
+            aiState = newState;
+            const statusEl = document.getElementById('ai-status');
+            if(newState === 'idle') {
+                statusEl.textContent = 'Online & Learning';
+                statusEl.style.color = '#5A8A6A';
+            } else if (newState === 'connecting') {
+                statusEl.textContent = 'Establishing Link...';
+                statusEl.style.color = '#81e6d9';
+            } else if (newState === 'processing') {
+                statusEl.textContent = 'Processing Data...';
+                statusEl.style.color = '#fbd38d';
+            }
+
+            if(!orbMesh) return;
+            switch(newState) {
+                case 'processing':
+                    gsap.to(orbMesh.scale, { x: 1.5, y: 1.5, z: 1.5, duration: 2, ease: "elastic.out(1, 0.3)" });
+                    gsap.to(orbMesh.material, { opacity: 0.8, duration: 1 });
+                    break;
+                case 'connecting':
+                    gsap.to(orbMesh.scale, { x: 1.2, y: 1.2, z: 1.2, duration: 1 });
+                    gsap.to(orbMesh.material, { opacity: 0.5, duration: 0.5 });
+                    break;
+                default:
+                    gsap.to(orbMesh.scale, { x: 1, y: 1, z: 1, duration: 1 });
+                    gsap.to(orbMesh.material, { opacity: 0.3, duration: 1 });
+            }
+        }
+
+        /**************************************************************
+         * DATA & LOGIC TIER
+         **************************************************************/
+        const APPS = [
+            { id: 'gmail', name: 'Gmail', icon: 'mdi:gmail', color: '#EA4335', bg: '#EA433520', type: 'email', scopes: ['Read emails & extract deadlines', 'Send emails autonomously'] },
+            { id: 'whatsapp', name: 'WhatsApp', icon: 'mdi:whatsapp', color: '#25D366', bg: '#25D36620', type: 'tel', scopes: ['Parse task messages', 'Detect recurring reminders'] },
+            { id: 'notion', name: 'Notion', icon: 'mdi:notebook-outline', color: '#E2E8F0', bg: '#ffffff20', type: 'url', scopes: ['Track project databases', 'Update task statuses'] },
+            { id: 'slack', name: 'Slack', icon: 'mdi:slack', color: '#e01e5a', bg: '#e01e5a20', type: 'url', scopes: ['Read channel action items', 'Detect meeting requests'] },
+            { id: 'calendar', name: 'Calendar', icon: 'mdi:calendar', color: '#4285F4', bg: '#4285F420', type: 'email', scopes: ['Read time blocks', 'Detect deep work windows'] },
+            { id: 'drive', name: 'Drive', icon: 'mdi:google-drive', color: '#FFBA00', bg: '#FFBA0020', type: 'email', scopes: ['Read academic assets', 'Store semantic nodes'] },
+            { id: 'claude', name: 'Claude', icon: 'simple-icons:anthropic', color: '#D97757', bg: '#D9775720', type: 'url', scopes: ['Neural code auditing', 'Semantic context extraction'] },
+            { id: 'chatgpt', name: 'ChatGPT', icon: 'simple-icons:openai', color: '#10A37F', bg: '#10A37F20', type: 'url', scopes: ['Synthesize research', 'Refine creative logic paths'] },
+        ];
+
+        const AUTO_ACTION_TEMPLATES = [
+            "Analyzed your {app} messages and delayed 2 low-priority meetings.",
+            "Replied to vendor pitch on {app} stating you are currently booked.",
+            "Drafted weekly progress report in {app} based on your git commits.",
+            "Extracted a deadline for Thursday from {app} and added to focus queue.",
+            "Collaborated with {app} to audit the latest neural branch for logic flaws.",
+            "Used {app} node to synthesize a 4-page research summary from current context."
+        ];
+
+        const MODES = {
+            professional: [
+                { id: 1, icon: 'mdi:robot-outline', title: 'Autonomous<br>Execution', desc: 'Drafts & sends follow-ups automatically', btn: 'Launch Core' },
+                { id: 2, icon: 'mdi:brain', title: 'RL<br>Optimization', desc: 'Learns your reward workflow topology', btn: 'Analyze Graph' },
+                { id: 3, icon: 'mdi:calendar-sync-outline', title: 'Energy<br>Scheduling', desc: 'Maps focus blocks to peak rhythm', btn: 'Schedule' },
+                { id: 4, icon: 'mdi:shield-lock-outline', title: 'Privacy<br>Environment', desc: 'Encrypted on-device memory extraction', btn: 'Check Vault' }
+            ],
+            student: [
+                { id: 1, icon: 'mdi:school-outline', title: 'Academic<br>Command', desc: 'Unified dashboard for student life', btn: 'Open Hub', action: 'openStudentHub()' },
+                { id: 2, icon: 'mdi:brain', title: 'Neural<br>Pathing', desc: 'Identify cognitive friction in subjects', btn: 'Map Path', action: "openModal('path')" },
+                { id: 3, icon: 'mdi:calendar-multiselect', title: 'Lecture<br>Sync', desc: 'Synced with ACM Thapar database', btn: 'View Timetable', action: 'openTimetable()' },
+                { id: 4, icon: 'mdi:cloud-check', title: 'Research<br>Cloud', desc: 'Unified drive for academic assets', btn: 'Open Drive', action: "openModal('cloud')" }
+            ]
+        };
+
+        const ACM_DATA_URL = "https://raw.githubusercontent.com/ACM-Thapar/ACMTimeTable/main/src/assets/results_updated.json";
+
+        let state = {
+            connectedApps: [],
+            appCredentials: {},
+            autoLog: [],
+            rlConfidence: 65,
+            panelOpen: false,
+            studentMode: false,
+            collegeAuthorized: false,
+            tasks: [
+                { id: 1, title: 'Physics Lab Report', sub: 'Neural analysis of electromagnetism vectors', deadline: '2 Days Left', completed: false, priority: 'critical' }
+            ],
+            schedule: [],
+            dailyFlow: [],
+            blacklistedSubjects: ['Advanced Math', 'Discrete Mathematics'],
+            planningTomorrow: false,
+            hubScale: 1.0,
+            expandedTasks: [], // IDs of tasks with visible strategies
+            classOverrides: {}, // { "Batch-Day-Time": "cancelled" }
+            academicPerformance: null,
+            productivityStats: { precision: 85, depth: 70, retention: 92 },
+            // === NEURO-ADAPTIVE PIVOT STATE ===
+            cognitiveBandwidth: 'high',       // 'high', 'medium', 'low', 'zero'
+            sensoryFriction: false,            // External friction active
+            activeConditions: [],              // ['adhd', 'burnout', 'sensory', 'paralysis']
+            consecutiveMissed: 0,              // Tracks consecutive missed tasks
+            emergencyMode: false,              // Visual de-stimulation active
+            neuroPanelOpen: false,             // Panel visibility
+            bandwidthHistory: [],              // Track bandwidth changes over time
+        };
+
+        function timeToMinutes(timeStr) {
+            if (!timeStr) return 0;
+            const parts = timeStr.trim().split(' ');
+            if (parts.length < 2) return 0;
+            const [time, modifier] = parts;
+            let [hours, minutes] = time.split(':');
+            hours = parseInt(hours, 10);
+            minutes = parseInt(minutes, 10);
+            if (hours === 12) hours = 0;
+            if (modifier === 'PM') hours += 12;
+            return hours * 60 + minutes;
+        }
+
+        function generateDailyFlow() {
+            const days = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+            const now = new Date();
+            if (state.planningTomorrow) now.setDate(now.getDate() + 1);
+            
+            let dayName = days[now.getDay()];
+            // Weekend shift for demo
+            if (dayName === 'Saturday' || dayName === 'Sunday') dayName = 'Monday';
+
+            const dailyClasses = state.schedule.filter(l => {
+                const isDay = l.day === dayName;
+                const isBlacklisted = state.blacklistedSubjects.some(sub => l.subject.toLowerCase().includes(sub.toLowerCase()));
+                return isDay && !isBlacklisted;
+            }).sort((a,b) => timeToMinutes(a.time) - timeToMinutes(b.time));
+            const incompleteTasks = state.tasks.filter(t => !t.completed).sort((a,b) => {
+                const prio = { critical: 0, high: 1, medium: 2, low: 3 };
+                return prio[a.priority] - prio[b.priority];
+            });
+
+            const flow = [];
+            // Initialize to the first class time to avoid artificial gaps at 8:00 AM
+            let lastClassEnd = dailyClasses.length > 0 ? timeToMinutes(dailyClasses[0].time) : 540; 
+
+            // Step 1: Place Pinned Tasks
+            const pinnedTasks = incompleteTasks.filter(t => t.pinnedTime);
+            pinnedTasks.forEach(t => {
+                flow.push({
+                    type: 'task',
+                    time: t.pinnedTime,
+                    title: `PINNED: ${t.title}`,
+                    sub: `Manual User Allocation`,
+                    color: 'purple-400'
+                });
+            });
+
+            dailyClasses.forEach((lec, idx) => {
+                const overrideKey = `${state.batch}-${dayName}-${lec.time}`;
+                if (state.classOverrides[overrideKey] === 'cancelled') {
+                    // Class is cancelled, logic treats this as a Gap
+                    return; 
+                }
+
+                const classStart = timeToMinutes(lec.time);
+                const autonomousTasks = incompleteTasks.filter(t => !t.pinnedTime);
+                
+                if (classStart - lastClassEnd >= 30 && autonomousTasks.length > 0) {
+                    const task = autonomousTasks[0];
+                    // Remove from list if we successfully slot it (simplification)
+                    incompleteTasks.splice(incompleteTasks.indexOf(task), 1);
+                    flow.push({
+                        type: 'task',
+                        time: `${Math.floor(lastClassEnd/60).toString().padStart(2,'0')}:${(lastClassEnd%60).toString().padStart(2,'0')}`,
+                        title: `Deep Work: ${task.title}`,
+                        sub: `Autonomous allocation · ${task.priority} priority`,
+                        color: 'purple-400'
+                    });
+                } else if (classStart - lastClassEnd >= 30) {
+                    flow.push({
+                        type: 'break',
+                        time: `${Math.floor(lastClassEnd/60).toString().padStart(2,'0')}:${(lastClassEnd%60).toString().padStart(2,'0')}`,
+                        title: 'Neural Recovery',
+                        sub: 'Optimal window for cognitive reset',
+                        color: 'white/20'
+                    });
+                }
+
+                flow.push({
+                    type: 'class',
+                    id: overrideKey,
+                    time: lec.time,
+                    title: lec.subject,
+                    sub: `${lec.room} · Academic Stream`,
+                    color: 'brand-light'
+                });
+                
+                lastClassEnd = classStart + 50; 
+            });
+
+            // Step 3: Re-sort flow by time and resolve conflicts
+            flow.sort((a,b) => timeToMinutes(a.time) - timeToMinutes(b.time));
+            
+            // Step 4: Conflict Resolution (Delete Breaks if time is shared)
+            const deduplicated = [];
+            flow.forEach(item => {
+                const conflictIdx = deduplicated.findIndex(d => d.time === item.time);
+                if (conflictIdx !== -1) {
+                    const existing = deduplicated[conflictIdx];
+                    // If either is a break, keep the non-break one
+                    if (existing.type === 'break' && item.type !== 'break') {
+                        deduplicated[conflictIdx] = item;
+                    } 
+                    // If existing is non-break and item is break, ignore item
+                    else if (existing.type !== 'break' && item.type === 'break') {
+                        // Do nothing, keep existing
+                    } else {
+                        deduplicated.push(item);
+                    }
+                } else {
+                    deduplicated.push(item);
+                }
+            });
+
+            state.dailyFlow = deduplicated;
+        }
+
+        function mapAcmToPragati(acmBatchData) {
+            const days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
+            const flattened = [];
+            days.forEach(day => {
+                if (acmBatchData[day]) {
+                    Object.keys(acmBatchData[day]).forEach(timeStr => {
+                        const [code, room, subject, type] = acmBatchData[day][timeStr];
+                        flattened.push({ day, time: timeStr, subject: `${subject} ${type}`, room, code });
+                    });
+                }
+            });
+            return flattened;
+        }
+
+        function saveState() {
+            localStorage.setItem('pragati_ai_state', JSON.stringify(state));
+        }
+
+        function loadState() {
+            try {
+                const s = JSON.parse(localStorage.getItem('pragati_ai_state'));
+                if (s) state = { ...state, ...s };
+            } catch(e) {}
+            const confEl = document.getElementById('rl-confidence');
+            if(confEl) confEl.textContent = `CONF: ${state.rlConfidence}%`;
+            
+            const batchDisplay = document.getElementById('display-batch');
+            if(batchDisplay) batchDisplay.textContent = state.batch || '...';
+            const tableBatch = document.getElementById('timetable-display-batch');
+            if(tableBatch) tableBatch.textContent = state.batch || '...';
+
+            renderAcademicTasks();
+            updateMainAgenda();
+        }
+
+        function resetAll() {
+            localStorage.removeItem('pragati_ai_state');
+            location.reload();
+        }
+
+        /**************************************************************
+         * UI FOUNDATIONS
+         **************************************************************/
+        let oauthCallback = null;
+
+        function openModal(id) {
+            const modal = document.getElementById(`${id}-modal`);
+            const dialog = document.getElementById(`${id}-dialog`);
+            if(!modal || !dialog) return;
+            
+            modal.classList.remove('hidden');
+            modal.style.display = 'flex';
+            setTimeout(() => {
+                modal.classList.add('opacity-100');
+                modal.classList.remove('opacity-0');
+                dialog.classList.remove('scale-95');
+            }, 10);
+
+            if(id === 'timetable') renderFullTimetable();
+        }
+
+        function closeModal(id) {
+            const modal = document.getElementById(`${id}-modal`);
+            const dialog = document.getElementById(`${id}-dialog`);
+            if(!modal || !dialog) return;
+
+            modal.classList.add('opacity-0');
+            modal.classList.remove('opacity-100');
+            dialog.classList.add('scale-95');
+            setTimeout(() => {
+                modal.style.display = 'none';
+                modal.classList.add('hidden');
+                if(id === 'oauth' && aiState === 'connecting') setAIState('idle');
+            }, 300);
+        }
+
+        // --- Cancel Button Helpers ---
+        function closeOAuth() { closeModal('oauth'); }
+        function closePaymentModal() { closeModal('payment'); }
+        function closeLectureModal() { closeModal('lecture'); }
+
+        function toast(msg) {
+            const wrapper = document.getElementById('toast-wrapper');
+            const el = document.createElement('div');
+            el.className = 'glass-panel px-4 py-2 text-xs text-white/80 animate-fade flex items-center gap-2 border-white/5';
+            el.innerHTML = `<span class="w-1.5 h-1.5 bg-brand-light rounded-full pulse-dot"></span> ${msg}`;
+            wrapper.appendChild(el);
+            setTimeout(() => {
+                gsap.to(el, { opacity: 0, y: -10, duration: 0.3, onComplete: () => el.remove() });
+            }, 5000);
+        }
+
+        function toggleIntegrations() {
+            const panel = document.getElementById('side-panel');
+            if(!state.panelOpen) {
+                panel.classList.remove('opacity-0', '-translate-x-[120%]', 'pointer-events-none');
+                panel.classList.add('opacity-100', 'translate-x-0', 'pointer-events-auto');
+                state.panelOpen = true;
+                renderIntegrations();
+                renderAutoLog();
+            } else {
+                panel.classList.remove('opacity-100', 'translate-x-0', 'pointer-events-auto');
+                panel.classList.add('opacity-0', '-translate-x-[120%]', 'pointer-events-none');
+                state.panelOpen = false;
+            }
+        }
+
+        function updateUIForMode() {
+            const toggle = document.getElementById('student-toggle');
+            const modeText = document.getElementById('mode-text');
+            const agenda = document.getElementById('main-academic-agenda');
+            const statusEl = document.getElementById('ai-status');
+
+            const currentMode = state.studentMode ? 'student' : 'professional';
+            const config = MODES[currentMode];
+
+            // Update Labels
+            if (modeText) modeText.textContent = state.studentMode ? "Student Core" : "Professional";
+            if (statusEl) statusEl.textContent = state.studentMode ? "Neural Sync: Academic " : "Neural Sync: Active";
+            
+            if (state.studentMode) {
+                if (toggle) toggle.classList.add('border-brand-light/50', 'bg-brand-light/10');
+                if (state.collegeAuthorized && agenda) agenda.classList.remove('hidden');
+            } else {
+                if (toggle) toggle.classList.remove('border-brand-light/50', 'bg-brand-light/10');
+                if (agenda) agenda.classList.add('hidden');
+            }
+
+            // Update Capability Grid
+            config.forEach(card => {
+                const icon = document.getElementById(`cap-icon-${card.id}`);
+                const title = document.getElementById(`cap-title-${card.id}`);
+                const desc = document.getElementById(`cap-desc-${card.id}`);
+                const btnContent = document.getElementById(`cap-btn-${card.id}`);
+                const wrapper = icon?.closest('.glass-panel');
+
+                if (icon) icon.setAttribute('data-icon', card.icon);
+                if (title) title.innerHTML = card.title;
+                if (desc) {
+                    desc.textContent = card.desc;
+                    desc.style.display = card.desc ? 'block' : 'none';
+                }
+                if (btnContent) {
+                    btnContent.innerHTML = `<span class="iconify" data-icon="mdi:play"></span> ${card.btn}`;
+                }
+                
+                if (wrapper && card.action) {
+                    wrapper.setAttribute('onclick', card.action);
+                } else if (wrapper) {
+                    wrapper.setAttribute('onclick', `handleClick(${card.id})`);
+                }
+            });
+            
+            if (state.studentMode) {
+                renderAcademicTasks();
+                renderDailyFlow();
+                // Apply hub scale after load
+                const scaler = document.getElementById('student-hub-content-scaler');
+                if(scaler) {
+                    scaler.style.transform = `scale(${state.hubScale || 1.0})`;
+                    scaler.style.width = `${100 / (state.hubScale || 1.0)}%`;
+                }
+            }
+        }
+
+        function closeStudentHub() {
+            closeModal('student');
+            const wizard = document.getElementById('academic-setup-wizard');
+            if(wizard) wizard.classList.add('hidden');
+        }
+
+        function toggleStudentMode() {
+            state.studentMode = !state.studentMode;
+            saveState();
+            updateUIForMode();
+            toast(`Switched to ${state.studentMode ? 'Student' : 'Professional'} Mode`);
+        }
+
+        function openOnboarding(step) {
+            const steps = ['step-1', 'step-2'];
+            steps.forEach(s => document.getElementById(s).classList.add('hidden'));
+            const target = document.getElementById(`step-${step}`);
+            if(target) target.classList.remove('hidden');
+            openModal('onboarding');
+        }
+
+        function completeOnboarding() {
+            state.studentMode = true;
+            saveState();
+            updateUIForMode();
+            closeModal('onboarding');
+            toast("Synthesized Student Core successfully.");
+        }
+
+        function openStudentHub() {
+            state.studentMode = true;
+            saveState();
+            updateUIForMode();
+            openModal('student');
+            
+            const wizard = document.getElementById('academic-setup-wizard');
+            if (!state.collegeAuthorized && wizard) {
+                wizard.classList.remove('hidden');
+            }
+        }
+
+        function openTimetable() { 
+            if(!state.collegeAuthorized) {
+                openStudentHub();
+                toast("Neural Link required to view timetable.");
+            } else {
+                openModal('timetable'); 
+            }
+        }
+
+        /**************************************************************
+         * CONNECTION & OAUTH FLOW
+         **************************************************************/
+        function renderIntegrations() {
+            const list = document.getElementById('integrations-list');
+            if(!list) return;
+            list.innerHTML = '';
+            
+            APPS.forEach(app => {
+                const connected = state.connectedApps.includes(app.id);
+                const ident = connected ? state.appCredentials[app.id] : 'Offline';
+                const el = document.createElement('div');
+                el.className = `p-3 rounded-lg border flex items-center justify-between transition-all ${connected ? 'bg-brand/10 border-brand-light/40' : 'bg-white/5 border-white/5 opacity-50'}`;
+                el.innerHTML = `
+                    <div class="flex items-center gap-3">
+                        <span class="iconify text-xl" data-icon="${app.icon}" style="color:${app.color}"></span>
+                        <div class="flex flex-col">
+                            <span class="text-[10px] font-bold uppercase tracking-widest text-white">${app.name}</span>
+                            <span class="text-[8px] text-white/40 truncate max-w-[100px]">${ident}</span>
+                        </div>
+                    </div>
+                    <button onclick="${connected ? `disconnectApp('${app.id}')` : `openOAuth('${app.id}')`}" class="px-3 py-1 rounded text-[9px] font-bold uppercase tracking-wider ${connected ? 'text-red-400' : 'bg-brand text-white'}">
+                        ${connected ? 'Unlink' : 'Link'}
+                    </button>
+                `;
+                list.appendChild(el);
+            });
+        }
+
+        function openOAuth(appId) {
+            const app = APPS.find(a => a.id === appId);
+            if(!app) return;
+            oauthCallback = () => {
+                const input = document.getElementById('oauth-input').value.trim();
+                if(!input) { toast("Identifier required."); return; }
+                state.connectedApps.push(app.id);
+                state.appCredentials[app.id] = input;
+                state.rlConfidence += 5;
+                saveState();
+                toast(`Secure link established with ${app.name}`);
+                renderIntegrations();
+                closeModal('oauth');
+            };
+
+            document.getElementById('oauth-icon-svg').setAttribute('data-icon', app.icon);
+            document.getElementById('oauth-icon-svg').style.color = app.color;
+            document.getElementById('oauth-title').textContent = `Initialize ${app.name}`;
+            document.getElementById('oauth-scope-1').textContent = app.scopes[0];
+            document.getElementById('oauth-scope-2').textContent = app.scopes[1];
+            document.getElementById('oauth-input').placeholder = app.type === 'email' ? 'entity@domain.com' : 'workspace-id-node';
+            
+            openModal('oauth');
+            setAIState('connecting');
+        }
+
+        function allowOAuth() {
+            if(oauthCallback) oauthCallback();
+        }
+
+        function disconnectApp(appId) {
+            state.connectedApps = state.connectedApps.filter(id => id !== appId);
+            delete state.appCredentials[appId];
+            saveState();
+            renderIntegrations();
+            toast("Integration unlinked.");
+        }
+
+        function renderAutoLog() {
+            const list = document.getElementById('autolog-list') || document.getElementById('auto-log-list');
+            if(!list) return;
+            list.innerHTML = '';
+            if(!state.autoLog || state.autoLog.length === 0) {
+                list.innerHTML = '<p class="text-[9px] text-white/20 italic text-center py-4">Awaiting neural triggers...</p>';
+                return;
+            }
+            [...state.autoLog].sort((a,b) => b.time - a.time).forEach(log => {
+                const app = APPS.find(a => a.id === log.appId) || { icon: 'mdi:api' };
+                const el = document.createElement('div');
+                el.className = 'p-3 bg-white/5 border-l-2 border-brand-light rounded-r-md mb-2';
+                el.innerHTML = `
+                    <div class="flex items-center gap-2 mb-1">
+                        <span class="iconify text-[9px] text-brand-light" data-icon="${app.icon}"></span>
+                        <div class="text-[9px] text-white/80 font-medium">${log.desc}</div>
+                    </div>
+                    <div class="text-[8px] text-white/30 uppercase">${new Date(log.time).toLocaleTimeString()}</div>
+                `;
+                list.appendChild(el);
+            });
+        }
+
+        /**************************************************************
+         * ACADEMIC AUTOMATION & TASKS
+         **************************************************************/
+        function startAcademicAuthorization() {
+            const email = document.getElementById('setup-email').value;
+            const batch = document.getElementById('setup-batch').value;
+            const bridgeGmail = document.getElementById('setup-gmail-sync').checked;
+            if(!email || !batch) { toast("Missing credentials."); return; }
+
+            oauthCallback = () => completeAcademicFetch(email, batch, bridgeGmail);
+            document.getElementById('oauth-title').textContent = 'Academic Database Link';
+            document.getElementById('oauth-input').value = email;
+            document.getElementById('oauth-icon-svg').setAttribute('data-icon', 'mdi:school');
+            openModal('oauth');
+        }
+
+        async function completeAcademicFetch(email, batch, bridgeGmail) {
+            closeModal('oauth');
+            setAIState('processing');
+            const cleanBatch = batch.trim().toUpperCase();
+            const isThapar = email.toLowerCase().endsWith('@thapar.edu');
+            toast(isThapar ? `Syncing Batch ${cleanBatch}...` : "Synthesizing Academic Cloud...");
+
+            let extractedSchedule = [];
+            if (isThapar) {
+                try {
+                    const response = await fetch(`${ACM_DATA_URL}?v=${Date.now()}`);
+                    const masterData = await response.json();
+                    
+                    // Case-insensitive batch search
+                    let targetData = masterData[cleanBatch];
+                    if (!targetData) {
+                        const keys = Object.keys(masterData);
+                        const foundKey = keys.find(k => k.trim().toUpperCase() === cleanBatch);
+                        if (foundKey) targetData = masterData[foundKey];
+                    }
+
+                    if (targetData) {
+                        extractedSchedule = mapAcmToPragati(targetData);
+                        toast(`Batch ${cleanBatch} synchronized.`);
+                    } else {
+                        toast(`Batch ${cleanBatch} not found in repository.`);
+                    }
+                } catch (e) { toast("Handshake timed out."); }
+            }
+
+            setTimeout(() => {
+                state.collegeEmail = email || state.collegeEmail;
+                state.batch = cleanBatch || state.batch;
+                state.collegeAuthorized = true;
+                state.schedule = extractedSchedule;
+                if(bridgeGmail) state.connectedApps.push('gmail');
+                saveState();
+                
+                const wizard = document.getElementById('academic-setup-wizard');
+                if(wizard) wizard.classList.add('hidden');
+                
+                const agenda = document.getElementById('main-academic-agenda');
+                if(agenda) agenda.classList.remove('hidden');
+                
+                loadState(); // Refresh displays
+                updateUIForMode();
+                setAIState('idle');
+                toast(extractedSchedule.length ? "Academic Core synchronized." : "Neural Link active (No classes found).");
+            }, 2000);
+        }
+
+        function deleteTask(taskId) {
+            state.tasks = state.tasks.filter(t => t.id != taskId);
+            saveState();
+            renderAcademicTasks();
+            renderDailyFlow();
+            toast("Task permanently purged.");
+        }
+
+        function toggleTask(taskId) {
+            const task = state.tasks.find(t => t.id == taskId);
+            if (task) {
+                task.completed = !task.completed;
+                saveState();
+                renderAcademicTasks();
+                updateMainAgenda();
+                toast(task.completed ? "Task complete." : "Task reopened.");
+            }
+        }
+
+        function getNeuralStrategy(title) {
+            const t = title.toLowerCase();
+            if (t.includes('lab') || t.includes('practical')) {
+                return [
+                    { step: "Calibration", desc: "Audit equipment accuracy and setup work environment." },
+                    { step: "Execution", desc: "Perform data ingestion following strict procedural logic." },
+                    { step: "Audit", desc: "Verify data anomalies against theoretical expectations." }
+                ];
+            } else if (t.includes('project') || t.includes('presentation')) {
+                return [
+                    { step: "Framework", desc: "Define the semantic core and primary visual narrative." },
+                    { step: "Synthesis", desc: "Assemble iterative prototypes using high-focus blocks." },
+                    { step: "Refinement", desc: "Polish interactions and verify cross-platform integrity." }
+                ];
+            } else if (t.includes('study') || t.includes('exam') || t.includes('math')) {
+                return [
+                    { step: "Deconstruction", desc: "Break complex theorems into fundamental axioms." },
+                    { step: "Feynman Loop", desc: "Explain concepts to a non-technical peer to find gaps." },
+                    { step: "Active Recall", desc: "Solve 3-5 high-friction problems with zero assistance." }
+                ];
+            }
+            return [
+                { step: "Planning", desc: "Deconstruct task into 15-minute micro-sprints." },
+                { step: "Deep Work", desc: "Execute with zero notification interference." },
+                { step: "Closure", desc: "Sync results to the long-term knowledge repository." }
+            ];
+        }
+
+        function toggleStrategy(taskId) {
+            if (state.expandedTasks.includes(taskId)) {
+                state.expandedTasks = state.expandedTasks.filter(id => id !== taskId);
+            } else {
+                state.expandedTasks.push(taskId);
+            }
+            saveState();
+            renderAcademicTasks();
+        }
+
+        function renderAcademicTasks() {
+            const list = document.getElementById('academic-task-list');
+            if(!list) return;
+            list.innerHTML = '';
+            
+            const counter = document.getElementById('task-counter');
+            if(counter) counter.textContent = `${state.tasks.filter(t => !t.completed).length} ITEMS`;
+
+            state.tasks.forEach(task => {
+                const isExpanded = state.expandedTasks.includes(task.id);
+                const strategy = getNeuralStrategy(task.title);
+                const el = document.createElement('div');
+                el.className = `glass-panel border border-white/5 transition-all duration-300 ${task.completed ? 'opacity-40' : 'bg-white/5'}`;
+                el.innerHTML = `
+                    <div class="p-4">
+                        <div class="flex justify-between items-start">
+                            <div class="flex items-center gap-3">
+                                <input type="checkbox" ${task.completed ? 'checked' : ''} onchange="toggleTask(${task.id})" class="accent-brand-light">
+                                <h4 class="text-sm font-medium ${task.completed ? 'line-through text-white/40' : 'text-white'}">${task.title}</h4>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <button onclick="toggleStrategy(${task.id})" class="text-white/30 hover:text-brand-light transition-colors p-1" title="AI Strategic Path">
+                                    <span class="iconify" data-icon="mdi:brain"></span>
+                                </button>
+                                <button onclick="deleteTask(${task.id})" class="text-white/20 hover:text-red-400 transition-colors p-1">
+                                    <span class="iconify" data-icon="mdi:trash-can-outline"></span>
+                                </button>
+                            </div>
+                        </div>
+                        
+                        ${isExpanded ? `
+                        <div class="mt-4 pt-4 border-t border-white/10 space-y-3 animate-fade-in">
+                            <p class="text-[10px] text-brand-light font-bold uppercase tracking-widest mb-2">Neural Action Plan</p>
+                            ${strategy.map(s => `
+                                <div class="flex gap-3">
+                                    <div class="text-[9px] font-mono text-brand-light pt-0.5">0${strategy.indexOf(s)+1}</div>
+                                    <div class="flex-1">
+                                        <div class="text-[10px] font-bold text-white/90 underline decoration-brand-light/30 underline-offset-4">${s.step}</div>
+                                        <div class="text-[9px] text-white/50 leading-relaxed mt-1">${s.desc}</div>
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                        ` : ''}
+                    </div>
+                `;
+                list.appendChild(el);
+            });
+        }
+
+        function renderDailyFlow() {
+            const list = document.getElementById('lecture-schedule-container');
+            if(!list) return;
+
+            generateDailyFlow();
+            
+            if (!state.dailyFlow.length) {
+                list.innerHTML = `<div class="flex flex-col items-center justify-center py-10 opacity-40">
+                    <span class="iconify text-4xl mb-2" data-icon="mdi:calendar-blank"></span>
+                    <p class="text-xs italic">No flow data for today. Add tasks or sync batch.</p>
+                </div>`;
+                return;
+            }
+
+            list.innerHTML = state.dailyFlow.map(item => `
+                <div class="flex gap-4 mb-4 animate-fade relative group">
+                    <div class="w-12 text-right text-[10px] font-mono text-white/50 pt-1">${item.time}</div>
+                    <div class="w-px bg-white/10 relative">
+                        <div class="absolute top-1.5 -left-[3px] w-2 h-2 rounded-full bg-${item.color.split('/')[0]} shadow-glow"></div>
+                    </div>
+                    <div class="flex-1 glass-panel p-3 border border-white/10 hover:border-${item.color.split('/')[0]}/30 transition-all">
+                        <div class="flex justify-between items-start">
+                            <h4 class="text-xs font-bold text-white">${item.title}</h4>
+                            <div class="flex items-center gap-2">
+                                <span class="text-[8px] uppercase font-bold text-${item.color.split('/')[0]} tracking-widest">${item.type}</span>
+                                ${item.type === 'class' ? `<button onclick="toggleClassCancel('${item.id}')" class="text-white/20 hover:text-red-400 transition-colors"><span class="iconify" data-icon="mdi:calendar-remove"></span></button>` : ''}
+                            </div>
+                        </div>
+                        <div class="text-[9px] text-white/40 mt-1">${item.sub}</div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function toggleClassCancel(classId) {
+            if (state.classOverrides[classId]) {
+                delete state.classOverrides[classId];
+                toast("Class Restored.");
+            } else {
+                state.classOverrides[classId] = 'cancelled';
+                toast("Class Overridden (Cancelled).");
+            }
+            saveState();
+            renderDailyFlow();
+        }
+
+        function addNewTask() {
+            const title = document.getElementById('new-task-title').value.trim();
+            const prio = document.getElementById('new-task-prio').value;
+            const time = document.getElementById('new-task-time').value.trim();
+            
+            if(!title) return;
+            
+            const newTask = {
+                id: Date.now(),
+                title: title,
+                priority: prio,
+                pinnedTime: time || null,
+                completed: false
+            };
+            
+            state.tasks.unshift(newTask);
+            document.getElementById('new-task-title').value = '';
+            document.getElementById('new-task-time').value = '';
+            
+            saveState();
+            renderAcademicTasks();
+            renderDailyFlow();
+            toast(`Task "${title}" synchronized.`);
+        }
+
+        function checkPlanningReminder() {
+            const hour = new Date().getHours();
+            const reminder = document.getElementById('planning-reminder-card');
+            if (hour >= 18 && !state.dailyFlow.some(f => f.title.includes('Prep'))) {
+                if(reminder) reminder.classList.remove('hidden');
+            } else {
+                if(reminder) reminder.classList.add('hidden');
+            }
+        }
+
+        function updateHubZoom(delta) {
+            state.hubScale = Math.min(Math.max(state.hubScale + delta, 0.5), 1.5);
+            const scaler = document.getElementById('student-hub-content-scaler');
+            if (scaler) {
+                scaler.style.transform = `scale(${state.hubScale})`;
+                // Adjust height to compensate for scale if needed, or use specific overflow
+                scaler.style.height = `${100 / state.hubScale}%`;
+                scaler.style.width = `${100 / state.hubScale}%`;
+            }
+            saveState();
+            toast(`Optical scale set to ${Math.round(state.hubScale * 100)}%`);
+        }
+
+        function togglePlanningDay() {
+            state.planningTomorrow = !state.planningTomorrow;
+            const btn = document.getElementById('plan-day-btn');
+            const label = document.getElementById('current-flow-date');
+            
+            if (state.planningTomorrow) {
+                btn.innerHTML = `<span class="iconify" data-icon="mdi:rewind"></span> View Today`;
+                label.textContent = "TOMORROW";
+                toast("Switching to Predictive Flow...");
+            } else {
+                btn.innerHTML = `<span class="iconify" data-icon="mdi:fast-forward"></span> Plan Tomorrow`;
+                label.textContent = "TODAY";
+                toast("Returning to Present Flow.");
+            }
+            renderDailyFlow();
+        }
+
+        function updateMainAgenda() {
+            const nextClass = state.dailyFlow[0];
+            const nextClassTitle = document.getElementById('agenda-next-class');
+            const nextClassSub = document.getElementById('agenda-next-class-sub');
+            if (nextClassTitle) {
+                if (nextClass) {
+                    nextClassTitle.textContent = nextClass.title;
+                    nextClassSub.textContent = `${nextClass.time} · ${nextClass.type.toUpperCase()}`;
+                } else {
+                    nextClassTitle.textContent = "Flow Idle";
+                    nextClassSub.textContent = state.collegeAuthorized ? "Neural mapping completed" : "Sync required";
+                }
+            }
+        }
+
+        function triggerNeuralAudit() {
+            if (!state.collegeAuthorized) { toast("Neural Link required."); return; }
+            setAIState('processing');
+            toast("Initiating Autonomous Audit...");
+            setTimeout(() => {
+                state.autoLog.unshift({ appId: 'claude', time: Date.now(), desc: `Audited ${Math.floor(Math.random()*10+5)} nodes. Accuracy: 100%` });
+                state.rlConfidence += 1;
+                saveState();
+                toast("Audit Complete.");
+                setAIState('idle');
+            }, 3000);
+        }
+
+        function renderFullTimetable() {
+            const grid = document.getElementById('weekly-grid');
+            if(!grid) return;
+            const days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
+            grid.innerHTML = days.map(day => {
+                const dayClasses = state.schedule.filter(l => l.day === day);
+                return `
+                    <div class="flex flex-col gap-3">
+                        <div class="text-[10px] font-bold text-brand-light uppercase tracking-tighter border-b border-brand/30 pb-2 mb-2 text-center">${day}</div>
+                        ${dayClasses.length > 0 ? dayClasses.map(l => `
+                            <div class="p-3 rounded-lg bg-white/5 border border-white/5 hover:border-brand-light/30 transition-all">
+                                <div class="text-[10px] font-bold text-white mb-1 truncate">${l.subject}</div>
+                                <div class="text-[8px] text-white/40 font-mono">${l.time}</div>
+                                <div class="text-[8px] text-brand-light mt-1">${l.room}</div>
+                            </div>
+                        `).join('') : '<div class="text-[9px] text-white/20 italic text-center py-4">No classes</div>'}
+                    </div>
+                `;
+            }).join('');
+        }
+
+        /**************************************************************
+         * NEURO-ADAPTIVE PIVOT ENGINE
+         * Managing Cognitive State, Not Time
+         **************************************************************/
+
+        // --- Panel Toggle ---
+        function toggleNeuroPanel() {
+            const overlay = document.getElementById('neuro-panel-overlay');
+            if (overlay.classList.contains('hidden')) {
+                overlay.classList.remove('hidden');
+                state.neuroPanelOpen = true;
+                updateBandwidthUI();
+            } else {
+                closeNeuroPanelDirect();
+            }
+        }
+
+        function closeNeuroPanel(event) {
+            // Close only if clicking overlay background, not the panel itself
+            if (event.target === event.currentTarget) {
+                closeNeuroPanelDirect();
+            }
+        }
+
+        function closeNeuroPanelDirect() {
+            const overlay = document.getElementById('neuro-panel-overlay');
+            overlay.classList.add('hidden');
+            state.neuroPanelOpen = false;
+        }
+
+        // --- Bandwidth Management ---
+        function setBandwidth(level) {
+            const previous = state.cognitiveBandwidth;
+            state.cognitiveBandwidth = level;
+            
+            // Record bandwidth change
+            state.bandwidthHistory.push({
+                from: previous,
+                to: level,
+                time: Date.now()
+            });
+            // Keep last 20 entries
+            if (state.bandwidthHistory.length > 20) state.bandwidthHistory = state.bandwidthHistory.slice(-20);
+            
+            saveState();
+            updateBandwidthUI();
+            applyBandwidthEffects(level);
+            
+            // If zero bandwidth, suggest emergency mode
+            if (level === 'zero' && !state.emergencyMode) {
+                toast("🕊️ Zero bandwidth detected. Emergency Mode available.");
+            }
+            
+            const labels = { high: '⚡ High Bandwidth', medium: '🌤 Medium Bandwidth', low: '🌊 Low Bandwidth', zero: '🕊️ Zero Bandwidth — Rest Mode' };
+            toast(labels[level] || 'Bandwidth updated');
+        }
+
+        function updateBandwidthUI() {
+            const bw = state.cognitiveBandwidth;
+            
+            // Update bandwidth selector active state
+            document.querySelectorAll('.bw-option').forEach(el => {
+                el.classList.toggle('active', el.dataset.bw === bw);
+            });
+            
+            // Update condition chips
+            document.querySelectorAll('.condition-chip').forEach(el => {
+                el.classList.toggle('active', state.activeConditions.includes(el.dataset.condition));
+            });
+            
+            // Update friction toggle
+            const frictionToggle = document.getElementById('friction-toggle');
+            const frictionDot = document.getElementById('friction-toggle-dot');
+            if (frictionToggle && frictionDot) {
+                if (state.sensoryFriction) {
+                    frictionToggle.classList.add('bg-amber-400/20', 'border-amber-400/40');
+                    frictionToggle.classList.remove('bg-white/10', 'border-white/10');
+                    frictionDot.style.left = 'calc(100% - 18px)';
+                    frictionDot.classList.add('bg-amber-400');
+                    frictionDot.classList.remove('bg-white/40');
+                } else {
+                    frictionToggle.classList.remove('bg-amber-400/20', 'border-amber-400/40');
+                    frictionToggle.classList.add('bg-white/10', 'border-white/10');
+                    frictionDot.style.left = '2px';
+                    frictionDot.classList.remove('bg-amber-400');
+                    frictionDot.classList.add('bg-white/40');
+                }
+            }
+            
+            // Update status dot & label
+            const statusDot = document.getElementById('neuro-status-dot');
+            const statusLabel = document.getElementById('neuro-status-label');
+            if (statusDot) statusDot.className = `w-2 h-2 rounded-full bw-dot-${bw}`;
+            if (statusLabel) {
+                const names = { high: 'High', medium: 'Medium', low: 'Low', zero: 'Zero (Rest)' };
+                statusLabel.textContent = `Bandwidth: ${names[bw]}`;
+            }
+            
+            // Update missed count display
+            const missedEl = document.getElementById('neuro-missed-count');
+            if (missedEl) {
+                missedEl.textContent = state.consecutiveMissed > 0 ? `${state.consecutiveMissed} missed` : '';
+            }
+            
+            // Show/hide guided recovery
+            const recovery = document.getElementById('guided-recovery');
+            if (recovery) {
+                if (bw === 'low' || bw === 'zero') {
+                    recovery.classList.remove('hidden');
+                    updateRecoverySuggestions(bw);
+                } else {
+                    recovery.classList.add('hidden');
+                }
+            }
+            
+            // Update emergency button text
+            const emergencyText = document.getElementById('emergency-btn-text');
+            if (emergencyText) {
+                emergencyText.textContent = state.emergencyMode ? 'Deactivate Emergency Mode' : 'Activate Emergency Mode';
+            }
+            
+            // Update header bandwidth indicator
+            updateHeaderBandwidth();
+        }
+
+        function updateHeaderBandwidth() {
+            const bw = state.cognitiveBandwidth;
+            const statusEl = document.getElementById('ai-status');
+            if (!statusEl) return;
+            
+            const bwLabels = {
+                high: 'Neural Sync: Active ⚡',
+                medium: 'Bandwidth: Moderate 🌤',
+                low: 'Bandwidth: Low — Gentle Mode 🌊',
+                zero: 'Rest Mode — Recovery Active 🕊️'
+            };
+            const bwColors = {
+                high: '#5A8A6A',
+                medium: '#F6AD55',
+                low: '#90CDF4',
+                zero: '#CBD5E0'
+            };
+            
+            if (state.studentMode) {
+                statusEl.textContent = bwLabels[bw];
+            } else {
+                statusEl.textContent = bwLabels[bw];
+            }
+            statusEl.style.color = bwColors[bw];
+            
+            // Sync header button dot
+            const headerDot = document.getElementById('header-bw-dot');
+            if (headerDot) headerDot.className = `w-1.5 h-1.5 rounded-full bw-dot-${bw}`;
+        }
+
+        function updateRecoverySuggestions(bw) {
+            const container = document.getElementById('recovery-suggestions');
+            if (!container) return;
+            
+            const suggestions = {
+                low: [
+                    "Focus on just one small task. You don't have to do everything.",
+                    "Set a 10-minute timer. Work for just 10 minutes, then reassess.",
+                    "Your incomplete tasks have been gently rescheduled. No debt."
+                ],
+                zero: [
+                    "Take 5 deep breaths. Close your eyes.",
+                    "Move to a quieter space if possible.",
+                    "Your tasks are safe. Nothing is lost. Rest now.",
+                    "Only essential classes are showing. Everything else can wait."
+                ]
+            };
+            
+            const items = suggestions[bw] || suggestions.low;
+            container.innerHTML = items.map(s => `
+                <div class="flex items-center gap-2 text-[10px] text-white/60">
+                    <span class="iconify text-blue-300/40" data-icon="mdi:check-circle-outline"></span>
+                    ${s}
+                </div>
+            `).join('');
+        }
+
+        function applyBandwidthEffects(level) {
+            // Adjust 3D animation speed based on bandwidth
+            if (typeof particles !== 'undefined' && particles) {
+                const speedMap = { high: 0.005, medium: 0.003, low: 0.001, zero: 0.0005 };
+                // Store target speed for animate3D to use
+                window._neuroAnimSpeed = speedMap[level] || 0.005;
+            }
+            
+            // Adjust orb opacity
+            if (typeof orbMesh !== 'undefined' && orbMesh && typeof gsap !== 'undefined') {
+                const opacityMap = { high: 0.3, medium: 0.2, low: 0.1, zero: 0.03 };
+                gsap.to(orbMesh.material, { opacity: opacityMap[level], duration: 2 });
+            }
+            
+            // Auto-reclassify tasks based on bandwidth
+            reclassifyTasksForBandwidth(level);
+        }
+
+        // --- Task Reclassification based on Bandwidth ---
+        function reclassifyTasksForBandwidth(bw) {
+            if (bw === 'high') return; // No changes at full bandwidth
+            
+            // In low/zero modes, visually shift task urgency perception
+            // This doesn't change stored priority, but affects flow generation
+            if (bw === 'zero') {
+                // Filter daily flow to show only essential classes
+                const container = document.getElementById('lecture-schedule-container');
+                if (container && state.dailyFlow.length) {
+                    const essentialOnly = state.dailyFlow.filter(item => item.type === 'class');
+                    if (essentialOnly.length === 0) {
+                        container.innerHTML = `
+                            <div class="recovery-card text-center py-8">
+                                <span class="iconify text-3xl text-blue-300/30 mb-3" data-icon="mdi:spa-outline"></span>
+                                <h4 class="text-sm text-white/60 mb-2">Rest Mode Active</h4>
+                                <p class="text-[10px] text-white/30">No essential commitments right now. Take care of yourself.</p>
+                            </div>`;
+                    }
+                }
+            }
+        }
+
+        // --- Condition Presets ---
+        function toggleCondition(condition) {
+            const idx = state.activeConditions.indexOf(condition);
+            if (idx !== -1) {
+                state.activeConditions.splice(idx, 1);
+            } else {
+                state.activeConditions.push(condition);
+            }
+            
+            // Auto-adjust bandwidth based on conditions
+            autoAdjustForConditions();
+            saveState();
+            updateBandwidthUI();
+        }
+
+        function autoAdjustForConditions() {
+            const conditions = state.activeConditions;
+            
+            if (conditions.includes('paralysis') || (conditions.includes('burnout') && conditions.includes('sensory'))) {
+                // Severe: auto-suggest zero
+                if (state.cognitiveBandwidth === 'high' || state.cognitiveBandwidth === 'medium') {
+                    setBandwidth('zero');
+                    toast("🕊️ Executive paralysis detected. Shifting to Zero Bandwidth.");
+                }
+            } else if (conditions.includes('burnout') || conditions.includes('sensory')) {
+                // Moderate: auto-suggest low
+                if (state.cognitiveBandwidth === 'high') {
+                    setBandwidth('low');
+                    toast("🌊 Shifting to Low Bandwidth for recovery.");
+                }
+            } else if (conditions.includes('adhd')) {
+                // ADHD spiral: medium with friction awareness
+                if (state.cognitiveBandwidth === 'high') {
+                    setBandwidth('medium');
+                    state.sensoryFriction = true;
+                    toast("🌤 ADHD mode: Medium bandwidth + sensory friction ON.");
+                }
+            }
+        }
+
+        // --- Sensory Friction ---
+        function toggleSensoryFriction() {
+            state.sensoryFriction = !state.sensoryFriction;
+            saveState();
+            updateBandwidthUI();
+            
+            if (state.sensoryFriction) {
+                toast("⚠️ Sensory friction ON — recovery windows expanded.");
+                // Expand breaks in daily flow
+                expandRecoveryWindows();
+            } else {
+                toast("Sensory friction OFF — standard flow restored.");
+                renderDailyFlow();
+            }
+        }
+
+        function expandRecoveryWindows() {
+            // When friction is ON, inject extra recovery blocks into the flow
+            if (!state.dailyFlow.length) return;
+            
+            const expandedFlow = [];
+            state.dailyFlow.forEach((item, idx) => {
+                expandedFlow.push(item);
+                // After every class, add a 15-min sensory buffer
+                if (item.type === 'class' && idx < state.dailyFlow.length - 1) {
+                    const nextItem = state.dailyFlow[idx + 1];
+                    if (nextItem && nextItem.type !== 'break') {
+                        const classEnd = timeToMinutes(item.time) + 50;
+                        expandedFlow.push({
+                            type: 'break',
+                            time: `${Math.floor(classEnd/60).toString().padStart(2,'0')}:${(classEnd%60).toString().padStart(2,'0')}`,
+                            title: '🧘 Sensory Recovery Buffer',
+                            sub: 'Auto-inserted due to environmental friction',
+                            color: 'blue-300'
+                        });
+                    }
+                }
+            });
+            
+            // Re-render with expanded flow
+            const container = document.getElementById('lecture-schedule-container');
+            if (!container) return;
+            container.innerHTML = expandedFlow.map(item => `
+                <div class="flex gap-4 mb-4 animate-fade relative group">
+                    <div class="w-12 text-right text-[10px] font-mono text-white/50 pt-1">${item.time}</div>
+                    <div class="w-px bg-white/10 relative">
+                        <div class="absolute top-1.5 -left-[3px] w-2 h-2 rounded-full bg-${item.color.split('/')[0]} shadow-glow"></div>
+                    </div>
+                    <div class="flex-1 glass-panel p-3 border border-white/10 hover:border-${item.color.split('/')[0]}/30 transition-all">
+                        <div class="flex justify-between items-start">
+                            <h4 class="text-xs font-bold text-white">${item.title}</h4>
+                            <span class="text-[8px] uppercase font-bold text-${item.color.split('/')[0]} tracking-widest">${item.type}</span>
+                        </div>
+                        <div class="text-[9px] text-white/40 mt-1">${item.sub}</div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // --- Emergency Mode ---
+        function activateEmergencyMode() {
+            state.emergencyMode = !state.emergencyMode;
+            saveState();
+            
+            if (state.emergencyMode) {
+                document.body.classList.add('emergency-mode');
+                state.cognitiveBandwidth = 'zero';
+                toast("🛡️ Emergency Mode ON — All noise stripped. Only essentials visible.");
+                updateBandwidthUI();
+                applyBandwidthEffects('zero');
+            } else {
+                document.body.classList.remove('emergency-mode');
+                toast("Emergency Mode OFF — Standard interface restored.");
+                updateBandwidthUI();
+                applyBandwidthEffects(state.cognitiveBandwidth);
+            }
+        }
+
+        // --- Shame-Free Loop ---
+        // Override the existing task rendering to support glide/dissolve
+        function getTaskShameStatus(task) {
+            if (task.completed) return 'completed';
+            if (!task.glideCount) return 'normal';
+            if (task.glideCount >= 3) return 'dissolved';
+            return 'glided';
+        }
+
+        function glideTask(taskId) {
+            const task = state.tasks.find(t => t.id == taskId);
+            if (!task) return;
+            
+            task.glideCount = (task.glideCount || 0) + 1;
+            state.consecutiveMissed++;
+            
+            if (task.glideCount >= 3) {
+                // Dissolve — archive the task
+                task.dissolved = true;
+                toast(`🕊️ "${task.title}" dissolved — no debt created.`);
+            } else {
+                toast(`✨ "${task.title}" glided forward. No pressure.`);
+            }
+            
+            saveState();
+            renderAcademicTasks();
+            
+            // Check for autonomous downshift
+            checkAutonomousDownshift();
+        }
+
+        // --- Autonomous Down-shifting ---
+        function checkAutonomousDownshift() {
+            if (state.consecutiveMissed >= 4 && !state.emergencyMode) {
+                // Auto-activate emergency
+                activateEmergencyMode();
+                toast("🛡️ Multiple tasks missed. Emergency Mode auto-activated to protect you.");
+            } else if (state.consecutiveMissed >= 2 && state.cognitiveBandwidth === 'high') {
+                // Suggest downshift
+                showDownshiftSuggestion();
+            }
+        }
+
+        function showDownshiftSuggestion() {
+            const modal = document.getElementById('downshift-modal');
+            if (!modal) return;
+            
+            const msg = document.getElementById('downshift-message');
+            if (msg) {
+                const messages = [
+                    "It looks like you've been struggling with tasks. Would you like to switch to a gentler mode? Your tasks are safe.",
+                    "Hey, it's okay. Multiple tasks have been missed — this doesn't define your day. Want to shift to Low Bandwidth?",
+                    "Your brain might need a different pace right now. Switching to Low mode will reduce noise and protect your flow."
+                ];
+                msg.textContent = messages[Math.floor(Math.random() * messages.length)];
+            }
+            
+            modal.classList.remove('hidden');
+            modal.style.display = 'flex';
+        }
+
+        function dismissDownshift() {
+            const modal = document.getElementById('downshift-modal');
+            if (modal) {
+                modal.classList.add('hidden');
+                modal.style.display = 'none';
+            }
+        }
+
+        function acceptDownshift() {
+            dismissDownshift();
+            setBandwidth('low');
+            toast("🌊 Switched to Low Bandwidth. Your tasks will glide, not accumulate.");
+        }
+
+        // --- Enhanced Task Rendering with Shame-Free Loop ---
+        // This replaces the original renderAcademicTasks to add glide/dissolve UI
+        const _originalRenderAcademicTasks = typeof renderAcademicTasks === 'function' ? renderAcademicTasks : null;
+        
+        // We override renderAcademicTasks in place (it's already defined above)
+        // The shame-free visual treatment is applied through CSS classes in the existing renderer
+        // Let's patch the task element creation instead
+
+        function getTaskExtraClasses(task) {
+            const status = getTaskShameStatus(task);
+            if (status === 'dissolved') return 'task-dissolved';
+            if (status === 'glided') return 'task-glided';
+            return '';
+        }
+
+        function getTaskStatusBadge(task) {
+            const status = getTaskShameStatus(task);
+            if (status === 'dissolved') {
+                return `<span class="text-[8px] text-white/20 uppercase tracking-widest ml-2">dissolved · no debt</span>`;
+            }
+            if (status === 'glided') {
+                return `<span class="text-[8px] text-amber-400/60 uppercase tracking-widest ml-2">glided ×${task.glideCount}</span>`;
+            }
+            return '';
+        }
+
+        function getTaskGlideButton(task) {
+            if (task.completed || task.dissolved) return '';
+            return `<button onclick="glideTask(${task.id})" class="text-white/20 hover:text-amber-400 transition-colors p-1" title="Glide task forward (shame-free)">
+                <span class="iconify" data-icon="mdi:arrow-right-bold-circle-outline"></span>
+            </button>`;
+        }
+
+        // Patch the renderAcademicTasks to include shame-free elements
+        // We save the existing one and override
+        function renderAcademicTasksNeuro() {
+            const list = document.getElementById('academic-task-list');
+            if(!list) return;
+            list.innerHTML = '';
+            
+            const counter = document.getElementById('task-counter');
+            const activeTasks = state.tasks.filter(t => !t.completed && !t.dissolved);
+            if(counter) counter.textContent = `${activeTasks.length} ITEMS`;
+
+            // Sort: dissolved last, then by priority
+            const sortedTasks = [...state.tasks].sort((a, b) => {
+                if (a.dissolved && !b.dissolved) return 1;
+                if (!a.dissolved && b.dissolved) return -1;
+                return 0;
+            });
+
+            sortedTasks.forEach(task => {
+                const isExpanded = state.expandedTasks.includes(task.id);
+                const strategy = getNeuralStrategy(task.title);
+                const extraClasses = getTaskExtraClasses(task);
+                const statusBadge = getTaskStatusBadge(task);
+                const glideBtn = getTaskGlideButton(task);
+                
+                const el = document.createElement('div');
+                el.className = `glass-panel border border-white/5 transition-all duration-300 ${task.completed ? 'opacity-40' : 'bg-white/5'} ${extraClasses}`;
+                el.innerHTML = `
+                    <div class="p-4">
+                        <div class="flex justify-between items-start">
+                            <div class="flex items-center gap-3">
+                                <input type="checkbox" ${task.completed ? 'checked' : ''} ${task.dissolved ? 'disabled' : ''} onchange="toggleTask(${task.id})" class="accent-brand-light">
+                                <div>
+                                    <h4 class="text-sm font-medium ${task.completed ? 'line-through text-white/40' : 'text-white'}">${task.title}</h4>
+                                    ${statusBadge}
+                                </div>
+                            </div>
+                            <div class="flex items-center gap-1">
+                                ${glideBtn}
+                                <button onclick="toggleStrategy(${task.id})" class="text-white/30 hover:text-brand-light transition-colors p-1" title="AI Strategic Path">
+                                    <span class="iconify" data-icon="mdi:brain"></span>
+                                </button>
+                                <button onclick="deleteTask(${task.id})" class="text-white/20 hover:text-red-400 transition-colors p-1">
+                                    <span class="iconify" data-icon="mdi:trash-can-outline"></span>
+                                </button>
+                            </div>
+                        </div>
+                        
+                        ${isExpanded ? `
+                        <div class="mt-4 pt-4 border-t border-white/10 space-y-3 animate-fade-in">
+                            <p class="text-[10px] text-brand-light font-bold uppercase tracking-widest mb-2">Neural Action Plan</p>
+                            ${strategy.map(s => `
+                                <div class="flex gap-3">
+                                    <div class="text-[9px] font-mono text-brand-light pt-0.5">0${strategy.indexOf(s)+1}</div>
+                                    <div class="flex-1">
+                                        <div class="text-[10px] font-bold text-white/90 underline decoration-brand-light/30 underline-offset-4">${s.step}</div>
+                                        <div class="text-[9px] text-white/50 leading-relaxed mt-1">${s.desc}</div>
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                        ` : ''}
+                    </div>
+                `;
+                list.appendChild(el);
+            });
+        }
+
+        // --- Restore Neuro State on Load ---
+        function initNeuroAdaptive() {
+            // Restore emergency mode visual state
+            if (state.emergencyMode) {
+                document.body.classList.add('emergency-mode');
+            }
+            
+            // Restore bandwidth effects
+            applyBandwidthEffects(state.cognitiveBandwidth);
+            updateBandwidthUI();
+            updateHeaderBandwidth();
+            
+            // Override the task renderer with neuro-aware version
+            window.renderAcademicTasks = renderAcademicTasksNeuro;
+        }
+
+        /**************************************************************
+         * INITIALIZATION
+         **************************************************************/
+        document.addEventListener('DOMContentLoaded', () => {
+            init3D();
+            loadState();
+            initNeuroAdaptive();    // Initialize Neuro-Adaptive Pivot
+            updateUIForMode();
+            renderIntegrations();
+            renderAutoLog();
+            checkPlanningReminder();
+            
+            // Basic chat form handler
+            const chatForm = document.getElementById('chat-form');
+            if(chatForm) chatForm.onsubmit = (e) => {
+                e.preventDefault();
+                const input = document.getElementById('chat-input');
+                if(!input.value.trim()) return;
+                const box = document.getElementById('chat-history');
+                box.innerHTML += `<div class="p-2 mb-2 bg-white/5 rounded text-xs text-white">User: ${input.value}</div>`;
+                input.value = '';
+                setAIState('processing');
+                setTimeout(() => {
+                    box.innerHTML += `<div class="p-2 mb-2 bg-brand/10 rounded text-xs text-white">AI: Context mapped. Optimization in progress.</div>`;
+                    box.scrollTop = box.scrollHeight;
+                    setAIState('idle');
+                }, 1000);
+            };
+        });
+    </script>
+</body>
+</html>
